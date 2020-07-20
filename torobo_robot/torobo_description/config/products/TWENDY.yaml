@@ -1,0 +1,7 @@
+model: arm
+arm: TWDY-R-C-001-7 
+gripper: "" 
+humanoid: ""
+left_gripper: ""
+right_gripper: ""
+base: TRBB-TWDY-001 

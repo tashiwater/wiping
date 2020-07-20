@@ -1,0 +1,10 @@
+<launch>
+
+    <arg name="mock" default="false"/>
+  
+    <node ns="torobo" pkg="torobo_driver" name="torobo_driver_spawner_node" type="torobo_driver_spawner.py" output="screen"
+          args="--manager=torobo_nodelet_manager --type=torobo_driver/ToroboDriverNode 
+                --mock=$(arg mock)
+                --driver_config_dir=$(find torobo_driver)/config"/>
+
+</launch>

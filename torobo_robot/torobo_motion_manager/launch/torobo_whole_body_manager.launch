@@ -1,0 +1,26 @@
+<launch>
+
+  <arg name="model" default="torobo"/>
+
+  <group if="$(eval model == 'torobo')">
+    <node pkg="torobo_motion_manager" name="torobo_whole_body_manager" ns="torobo"
+        args="left_arm_controller right_arm_controller torso_head_controller"
+        type="torobo_whole_body_manager.py" output="screen" respawn="false"/>
+  </group>
+  <group if="$(eval model == 'torobo_gripper')">
+    <node pkg="torobo_motion_manager" name="torobo_whole_body_manager" ns="torobo"
+        args="left_arm_controller right_arm_controller torso_head_controller"
+        type="torobo_whole_body_manager.py" output="screen" respawn="false"/>
+  </group>
+  <group if="$(eval model == 'toroboarm')">
+    <node pkg="torobo_motion_manager" name="torobo_whole_body_manager" ns="torobo"
+        args="arm_controller"
+        type="torobo_whole_body_manager.py" output="screen" respawn="false"/>
+  </group>
+  <group if="$(eval model == 'toroboarm_gripper')">
+    <node pkg="torobo_motion_manager" name="torobo_whole_body_manager" ns="torobo"
+        args="arm_controller"
+        type="torobo_whole_body_manager.py" output="screen" respawn="false"/>
+  </group>
+
+</launch>

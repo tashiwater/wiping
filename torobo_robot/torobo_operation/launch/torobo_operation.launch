@@ -1,0 +1,8 @@
+<launch>
+
+  <node pkg="torobo_operation" name="torobo_operation_spawner_node" type="torobo_operation_spawner.py" output="screen" ns="torobo"
+        args="--pkg=torobo_operation --type=torobo_operation_node --ns=torobo --name=torobo_operation --output=screen"/>
+
+  <include file="$(find torobo_motion_manager)/launch/torobo_motion_manager.launch"></include>
+
+</launch>

@@ -1,0 +1,75 @@
+<?xml version="1.0"?>
+<robot name="torobo" xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <xacro:arg name="path" default="$(find torobo_description)/config/products/default.yaml"/>
+
+  <xacro:property name="robot_config" value="${load_yaml('$(arg path)')}"/>
+
+  <xacro:arg name="model" default="${robot_config['model']}"/>
+  <xacro:arg name="arm" default="${robot_config['arm']}"/>
+  <xacro:arg name="gripper" default="${robot_config['gripper']}"/>
+  <xacro:arg name="humanoid" default="${robot_config['humanoid']}"/>
+  <xacro:arg name="left_gripper" default="${robot_config['left_gripper']}"/>
+  <xacro:arg name="right_gripper" default="${robot_config['right_gripper']}"/>
+  <xacro:arg name="base" default="${robot_config['base']}"/>
+
+
+  <!-- =============== Constants =============== -->
+  <xacro:property name="M_PI" value="3.1415926535897931"/>
+
+  <!-- =============== Load Dependencies =============== -->
+  <xacro:include filename="$(find torobo_description)/urdf/torobo.gazebo"/>
+  <xacro:include filename="$(find torobo_description)/urdf/torobo.transmission.xacro"/>
+
+  <!-- =============== Configure robot ================= -->
+  <xacro:if value="${'$(arg model)' == 'arm'}">
+    <xacro:include filename="$(find torobo_resources)/$(arg arm)/urdf/arm.gazebo"/>
+    <xacro:include filename="$(find torobo_resources)/$(arg arm)/urdf/arm.urdf.xacro"/>
+  </xacro:if>
+
+  <xacro:if value="${'$(arg model)' == 'arm_gripper'}">
+    <xacro:include filename="$(find torobo_resources)/$(arg arm)/urdf/arm.gazebo"/>
+    <xacro:include filename="$(find torobo_resources)/$(arg arm)/urdf/arm.urdf.xacro"/>
+    <xacro:include filename="$(find torobo_resources)/$(arg gripper)/urdf/gripper.gazebo"/>
+    <xacro:include filename="$(find torobo_resources)/$(arg gripper)/urdf/gripper.urdf.xacro"/> <!-- gripper joint's transmission must be defined after all the arm joints' transmissions are defined in order to avoid gazebo's SetPosition/Velocity problem -->
+    <xacro:gripper_macro prefix="gripper/" attach_link="arm/link_7" attach_xyz="0 0 0" attach_rpy="0 0 0" />
+    <xacro:gripper_gazebo_macro prefix="gripper/" use_graspfix="false"/>
+  </xacro:if>
+
+  <xacro:if value="${'$(arg model)' == 'humanoid'}">
+    <xacro:include filename="$(find torobo_resources)/$(arg humanoid)/urdf/humanoid.gazebo"/>
+    <xacro:include filename="$(find torobo_resources)/$(arg humanoid)/urdf/humanoid.urdf.xacro"/>
+  </xacro:if>
+
+  <xacro:if value="${'$(arg model)' == 'humanoid_gripper'}">
+    <xacro:include filename="$(find torobo_resources)/$(arg humanoid)/urdf/humanoid.gazebo"/>
+    <xacro:include filename="$(find torobo_resources)/$(arg humanoid)/urdf/humanoid.urdf.xacro"/>
+
+    <xacro:include filename="$(find torobo_resources)/$(arg left_gripper)/urdf/gripper.gazebo"/>
+    <xacro:include filename="$(find torobo_resources)/$(arg left_gripper)/urdf/gripper.urdf.xacro"/> <!-- gripper joint's transmission must be defined after all the arm joints' transmissions are defined in order to avoid gazebo's SetPosition/Velocity problem -->
+    <xacro:gripper_macro prefix="left_gripper/" attach_link="left_arm/link_7" attach_xyz="0 0 0" attach_rpy="0 0 0"/>
+    <xacro:gripper_gazebo_macro prefix="left_gripper/" use_graspfix="true"/>
+  
+    <xacro:include filename="$(find torobo_resources)/$(arg right_gripper)/urdf/gripper.gazebo"/>
+    <xacro:include filename="$(find torobo_resources)/$(arg right_gripper)/urdf/gripper.urdf.xacro"/> <!-- gripper joint's transmission must be defined after all the arm joints' transmissions are defined in order to avoid gazebo's SetPosition/Velocity problem -->
+    <xacro:gripper_macro prefix="right_gripper/" attach_link="right_arm/link_7" attach_xyz="0 0 0" attach_rpy="0 0 0" />
+    <xacro:gripper_gazebo_macro prefix="right_gripper/" use_graspfix="false"/>
+  </xacro:if>
+
+  <xacro:if value="${'$(arg base)' == ''}">
+    <link name="world"/>
+
+    <joint name="joint_base" type="fixed">
+      <origin xyz="0 0 0"/>
+      <parent link="world"/>
+      <child link="base"/>
+    </joint>
+
+    <link name="base"/>
+  </xacro:if>
+
+  <xacro:unless value="${'$(arg base)' == ''}">
+    <xacro:include filename="$(find torobo_resources)/Base/$(arg base)/urdf/base.urdf.xacro"/>
+  </xacro:unless>
+
+</robot>

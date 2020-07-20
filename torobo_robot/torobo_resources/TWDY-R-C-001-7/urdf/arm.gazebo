@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<robot>
+
+  <!-- Link1 -->
+  <gazebo reference="arm/link_1">
+    <mu1>0.2</mu1>
+    <mu2>0.2</mu2>
+  </gazebo>
+
+  <!-- Link2 -->
+  <gazebo reference="arm/link_2">
+    <mu1>0.2</mu1>
+    <mu2>0.2</mu2>
+  </gazebo>
+
+  <!-- Link3 -->
+  <gazebo reference="arm/link_3">
+    <mu1>0.2</mu1>
+    <mu2>0.2</mu2>
+  </gazebo>
+
+  <!-- Link4 -->
+  <gazebo reference="arm/link_4">
+    <mu1>0.2</mu1>
+    <mu2>0.2</mu2>
+  </gazebo>
+
+  <!-- Link5 -->
+  <gazebo reference="arm/link_5">
+    <mu1>0.2</mu1>
+    <mu2>0.2</mu2>
+  </gazebo>
+
+  <!-- Link6 -->
+  <gazebo reference="arm/link_6">
+    <mu1>0.2</mu1>
+    <mu2>0.2</mu2>
+  </gazebo>
+  
+  <!-- Link7 -->
+  <gazebo reference="arm/link_7">
+    <mu1>0.2</mu1>
+    <mu2>0.2</mu2>
+  </gazebo>
+
+</robot>

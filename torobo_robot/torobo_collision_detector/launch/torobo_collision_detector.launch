@@ -1,0 +1,28 @@
+<launch>
+
+  <arg name="robot_model" default="torobo"/>
+
+  <!-- <include file="$(find torobo_gazebo)/launch/torobo_world.launch">
+    <arg name="robot_model" value="$(arg robot_model)"/>
+  </include>
+  
+  <include file="$(find torobo_control)/launch/torobo_control.launch">
+    <arg name="robot_model" value="$(arg robot_model)"/>
+  </include> -->
+
+  <!--
+  <node pkg="torobo_collision_detector" name="torobo_collision_detector" ns="torobo"
+     type="torobo_collision_detector_node" output="screen"/>
+  -->
+  <node pkg="nodelet" type="nodelet" name="collision_detector"
+        args="load torobo_collision_detector/CollisionDetector torobo_nodelet_manager"
+        required="true" ns="torobo">
+  </node>
+
+
+  <!-- <include file="$(find torobo_moveit_config)/launch/torobo_moveit_config.launch">
+    <arg name="sim" value="false"/>
+    <arg name="robot_model" value="$(arg robot_model)"/>
+  </include> -->
+
+</launch>

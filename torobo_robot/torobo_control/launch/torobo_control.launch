@@ -1,0 +1,48 @@
+<launch>
+
+  <arg name="sim" default="true"/>
+
+  <group ns="torobo">
+
+    <!-- load controller_config -->
+    <!--
+    <include file="$(find torobo_description)/launch/load_robot_config.launch"/>
+    -->
+
+    <!-- simulation (gazebo) -->
+    <group if="$(arg sim)">
+
+      <!-- load the controllers -->
+      <node name="controller_spawner" pkg="torobo_control" type="spawner.py" respawn="false"
+            output="screen"/>
+
+      <!-- load joint_state server -->
+      <node pkg="nodelet" type="nodelet" name="joint_state_server"
+            args="load torobo_control/JointStateServer torobo_nodelet_manager --publish_rate=20.0"
+            required="true">
+      </node>
+
+    </group>
+
+
+    <!-- real (driver) -->
+    <group unless="$(arg sim)">
+
+      <!-- load the controllers -->
+      <node pkg="nodelet" type="nodelet" name="controller_spawner"
+            args="load torobo_control/ControllerSpawner torobo_nodelet_manager"
+            required="true" output="screen">
+      </node>
+
+      <!-- load joint_state server -->
+      <node pkg="nodelet" type="nodelet" name="joint_state_server"
+            args="load torobo_control/JointStateServer torobo_nodelet_manager --publish_rate=20.0"
+            required="true" output="screen">
+      </node>
+
+    </group>
+
+  </group>
+
+
+</launch>

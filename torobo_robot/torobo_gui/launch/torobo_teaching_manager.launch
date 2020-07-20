@@ -1,0 +1,25 @@
+<launch>
+
+    <arg name="model" default="torobo"/>
+
+    <group if="$(eval model == 'torobo')">
+        <node pkg="rqt_gui" name="torobo_teaching_manager" type="rqt_gui" ns="torobo" output="screen"
+            args="--perspective-file $(find torobo_gui)/perspective/torobo_teaching_manager.perspective" />
+    </group>
+
+    <group if="$(eval model == 'torobo_gripper')">
+        <node pkg="rqt_gui" name="torobo_teaching_manager" type="rqt_gui" ns="torobo" output="screen"
+            args="--perspective-file $(find torobo_gui)/perspective/torobo_teaching_manager.perspective" />
+    </group>
+
+    <group if="$(eval model == 'toroboarm')">
+        <node pkg="rqt_gui" name="torobo_teaching_manager" type="rqt_gui" ns="torobo" output="screen"
+            args="--perspective-file $(find torobo_gui)/perspective/toroboarm_teaching_manager.perspective" />
+    </group>
+
+    <group if="$(eval model == 'toroboarm_gripper')">
+        <node pkg="rqt_gui" name="torobo_teaching_manager" type="rqt_gui" ns="torobo" output="screen"
+            args="--perspective-file $(find torobo_gui)/perspective/toroboarm_teaching_manager.perspective" />
+    </group>
+
+</launch>

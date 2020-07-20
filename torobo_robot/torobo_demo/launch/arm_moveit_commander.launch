@@ -1,0 +1,6 @@
+<launch>
+
+  <node name="$(anon arm_moveit_commander_node)" pkg="torobo_demo" type="arm_moveit_commander.py" ns="torobo" output="screen"/>
+
+</launch>
+

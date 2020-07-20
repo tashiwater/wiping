@@ -1,0 +1,24 @@
+<launch>
+
+  <!--
+  <arg name="model" default="torobo"/>
+
+  <group if="$(eval model == 'torobo')">
+    <include file="$(find torobo_motion_manager)/launch/torobo_motion_manager_spawner.launch"></include>
+  </group>
+  <group if="$(eval model == 'torobo_gripper')">
+    <include file="$(find torobo_motion_manager)/launch/torobo_motion_manager_spawner.launch"></include>
+  </group>
+  <group if="$(eval model == 'toroboarm')">
+    <include file="$(find torobo_motion_manager)/launch/toroboarm_motion_manager_spawner.launch"></include>
+  </group>
+  <group if="$(eval model == 'toroboarm_gripper')">
+    <include file="$(find torobo_motion_manager)/launch/toroboarm_motion_manager_spawner.launch"></include>
+  </group>
+  -->
+
+  <node pkg="torobo_motion_manager" name="torobo_motion_manager_spawner_node" type="torobo_motion_manager_spawner.py" output="screen" ns="torobo"
+        args="--pkg=torobo_motion_manager --type_tp=torobo_motion_manager_node --type_traj=torobo_teaching_trajectory_service_server_node.py --ns=torobo --name=torobo_motion_manager --output=screen"/>
+
+
+</launch>

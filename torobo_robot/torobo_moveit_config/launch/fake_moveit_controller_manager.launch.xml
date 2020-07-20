@@ -1,0 +1,22 @@
+<launch>
+
+  <!-- Set the param that trajectory_execution_manager needs to find the controller plugin -->
+  <param name="moveit_controller_manager" value="moveit_fake_controller_manager/MoveItFakeControllerManager"/>
+
+  <!-- The rest of the params are specific to this plugin -->
+  <node name="$(anon load_fake_controller_list_node)" pkg="torobo_moveit_config" type="load_fake_controller_list.py"
+        args="--param_name=controller_list --source_ns=torobo --source_list=controller_list"/>
+
+  <!-- The rest of the params are specific to this plugin -->
+  <!-- load controller_list -->
+  <param name="/dummy" command="
+      $(find torobo_moveit_config)/scripts/load_controller_list.py 
+      --model_dir=$(find torobo_description)/config/models
+      --yaml=controllers.yaml
+      --robot_config=$(find torobo_description)/config/products/$(optenv PRODUCT default).yaml
+      --fake
+      --dump_file=/tmp/torobo_rosparam_fake_controller_list.yaml
+      " />
+  <rosparam command="load" file="/tmp/torobo_rosparam_fake_controller_list.yaml" />
+
+</launch>

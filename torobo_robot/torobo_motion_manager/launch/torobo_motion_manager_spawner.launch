@@ -1,0 +1,14 @@
+<launch>
+  <node pkg="torobo_motion_manager" name="torobo_left_arm_motion_manager" ns="torobo/left_arm_controller"
+     type="torobo_motion_manager_node" output="screen" respawn="false"/>
+  <node pkg="torobo_motion_manager" name="torobo_right_arm_motion_manager" ns="torobo/right_arm_controller"
+     type="torobo_motion_manager_node" output="screen" respawn="false"/>
+  <node pkg="torobo_motion_manager" name="torobo_torso_head_motion_manager" ns="torobo/torso_head_controller"
+     type="torobo_motion_manager_node" output="screen" respawn="false"/>
+  <node pkg="torobo_motion_manager" name="torobo_left_arm_teaching_trajectory_service_server" ns="torobo/left_arm_controller"
+     type="torobo_teaching_trajectory_service_server_node.py" output="screen" respawn="false"/>
+  <node pkg="torobo_motion_manager" name="torobo_right_arm_teaching_trajectory_service_server" ns="torobo/right_arm_controller"
+     type="torobo_teaching_trajectory_service_server_node.py" output="screen" respawn="false"/>
+  <node pkg="torobo_motion_manager" name="torobo_torso_head_teaching_trajectory_service_server" ns="torobo/torso_head_controller"
+     type="torobo_teaching_trajectory_service_server_node.py" output="screen" respawn="false"/>
+</launch>

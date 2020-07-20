@@ -1,0 +1,75 @@
+<?xml version="1.0"?>
+<robot name="torobo" xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <!-- =============== Constants =============== -->
+  <xacro:property name="M_PI" value="3.1415926535897931"/>
+
+  <!-- =============== Load Dependencies =============== -->
+  <xacro:include filename="$(find torobo_dynamics)/test/resource/box.gazebo"/>
+
+  <!-- =============== Link & Joint =============== -->
+  <link name="world"/>
+
+  <joint name="joint_base" type="fixed">
+    <origin xyz="0 0 0.3"/>
+    <parent link="world"/>
+    <child link="base"/>
+  </joint>
+
+  <link name="base">
+    <visual>
+      <geometry>
+        <cylinder length="0.6" radius="1.0"/>
+      </geometry>
+      <material name="white">
+        <color rgba="1 1 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.6" radius="1.0" />
+      </geometry>
+    </collision>
+    <inertial>
+      <origin xyz="0 0 0.3"/>
+      <mass value="1"/>
+      <inertia
+        ixx="1" ixy="0" ixz="0"
+        iyy="1" iyz="0" izz="1"/>
+    </inertial>
+  </link>
+
+  <joint name="box_joint" type="revolute">
+    <parent link="base"/>
+    <child link="box_link"/>
+    <origin xyz="0 0 0.3" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="${-160*M_PI/180}" upper="${160*M_PI/180}" effort="110" velocity="${110*M_PI/180}"/>
+  </joint>
+
+  <link name="box_link">
+    <visual>
+      <geometry>
+        <box size="0.4 0.6 0.2"/>
+      </geometry>
+      <origin xyz="0.2 0.3 0.1" rpy="0 0 0"/>
+      <material name="white">
+        <color rgba="1 1 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.4 0.6 0.2"/>
+      </geometry>
+      <origin xyz="0.2 0.3 0.1" rpy="0 0 0"/>
+    </collision>
+    <inertial>
+      <origin xyz="0.2 0.3 0.1"/>
+      <mass value="1"/>
+      <inertia
+        ixx="0.133333" ixy="-0.06" ixz="-0.02"
+        iyy="0.066667" iyz="-0.03" izz="0.173333"/>
+    </inertial>
+  </link>
+
+</robot>

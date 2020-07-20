@@ -1,0 +1,19 @@
+<library path="lib/libtorobo_control">
+
+  <class name="torobo_control/ControllerSpawner"
+         type="torobo::ControllerSpawner"
+         base_class_type="nodelet::Nodelet">
+    <description>
+        Nodelet for torobo_control/ControllerSpawner
+    </description>
+  </class>
+
+  <class name="torobo_control/JointStateServer"
+         type="torobo::JointStateServer"
+         base_class_type="nodelet::Nodelet">
+    <description>
+        Nodelet for torobo_control/JointStateServer
+    </description>
+  </class>
+
+</library>

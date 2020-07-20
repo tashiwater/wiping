@@ -1,0 +1,11 @@
+<launch>
+
+    <arg name="sim" default="false"/>
+            <include file="$(find torobo_bringup)/launch/torobo_bringup.launch">
+                <arg name="sim" value="$(arg sim)"/>
+            </include>
+      <include file="$(find torobo_motion_manager)/launch/toroboarm_motion_manager_spawner.launch"/>
+<include file="$(find torobo_gui)/launch/torobo_whole_body_manager.launch"/>
+<node pkg="touchence" name="sensing" type="sensing.py"/>
+<node pkg="uvc_camera" name="uvc_camera_node" type="uvc_camera_node"/>
+</launch>

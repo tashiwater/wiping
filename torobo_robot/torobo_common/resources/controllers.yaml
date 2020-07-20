@@ -1,0 +1,33 @@
+controller_list:
+  - name: torobo/right_arm_controller
+    action_ns: follow_joint_trajectory
+    type: FollowJointTrajectory
+    default: true
+    joints:
+      - right_arm/joint_1
+      - right_arm/joint_2
+      - right_arm/joint_3
+      - right_arm/joint_4
+      - right_arm/joint_5
+      - right_arm/joint_6
+  - name: torobo/left_arm_controller
+    action_ns: follow_joint_trajectory
+    type: FollowJointTrajectory
+    default: true
+    joints:
+      - left_arm/joint_1
+      - left_arm/joint_2
+      - left_arm/joint_3
+      - left_arm/joint_4
+      - left_arm/joint_5
+      - left_arm/joint_6
+  - name: torobo/torso_head_controller
+    action_ns: follow_joint_trajectory
+    type: FollowJointTrajectory
+    default: true
+    joints:
+      - torso_head/joint_1
+      - torso_head/joint_2
+      - torso_head/joint_3
+      - torso_head/joint_4
+

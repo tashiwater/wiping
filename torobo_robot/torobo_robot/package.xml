@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package>
+  <name>torobo_robot</name>
+  <version>0.1.0</version>
+  <description>The torobo_robot package</description>
+
+  <maintainer email="info@robotics.tokyo">torobo</maintainer>
+
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <run_depend>torobo_bringup</run_depend>
+  <run_depend>torobo_description</run_depend>
+
+  <export>
+    <metapackage/>
+  </export>
+
+</package>

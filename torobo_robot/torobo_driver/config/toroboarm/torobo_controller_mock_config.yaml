@@ -1,0 +1,18 @@
+torobo_controller_config:
+  arm_controller:
+    # Connection type (USB or Ethernet)
+    - connection_type: mock
+
+    # arm controller definitions
+    - controller_name: arm_controller
+      # joints definitions
+      #   {joint_name of ROS: joint_index of MasterController}
+      joints: {
+        arm/joint_1: 0,
+        arm/joint_2: 1,
+        arm/joint_3: 2,
+        arm/joint_4: 3,
+        arm/joint_5: 4,
+        arm/joint_6: 5,
+        arm/joint_7: 6,
+      }

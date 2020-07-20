@@ -1,0 +1,11 @@
+<library path="lib/libtorobo_collision_detector">
+
+  <class name="torobo_collision_detector/CollisionDetector"
+         type="torobo::CollisionDetector"
+         base_class_type="nodelet::Nodelet">
+    <description>
+        Nodelet for torobo_collision_detector/CollisionDetector
+    </description>
+  </class>
+
+</library>

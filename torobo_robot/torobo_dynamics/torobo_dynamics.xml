@@ -1,0 +1,11 @@
+<library path="lib/libtorobo_dynamics">
+
+  <class name="torobo_dynamics/ToroboDynamicsNode"
+         type="torobo::ToroboDynamicsNode"
+         base_class_type="nodelet::Nodelet">
+    <description>
+        Nodelet for torobo_dynamics/ToroboDynamicsNode
+    </description>
+  </class>
+
+</library>

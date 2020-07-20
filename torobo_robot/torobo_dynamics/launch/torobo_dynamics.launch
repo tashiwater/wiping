@@ -1,0 +1,10 @@
+<launch>
+
+    <arg name="sim" default="true"/>
+
+    <node ns="torobo" pkg="torobo_dynamics" name="torobo_dynamics_spawner_node" type="torobo_dynamics_spawner.py" output="screen"
+          args="--manager=torobo_nodelet_manager --type=torobo_dynamics/ToroboDynamicsNode
+                --sim=$(arg sim)
+                "/>
+
+</launch>

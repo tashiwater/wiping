@@ -1,0 +1,6 @@
+<launch>
+  <node pkg="torobo_motion_manager" name="toroboarm_motion_manager" ns="torobo/arm_controller"
+     type="torobo_motion_manager_node" output="screen" respawn="false"/>
+  <node pkg="torobo_motion_manager" name="toroboarm_teaching_trajectory_service_server" ns="torobo/arm_controller"
+     type="torobo_teaching_trajectory_service_server_node.py" output="screen" respawn="false"/>
+</launch>
