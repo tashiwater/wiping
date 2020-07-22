@@ -102,8 +102,8 @@ class ToroboWholeBodyManager(Plugin):
 
 	#Add by Saito
         rospy.Subscriber("/image_raw", Image, self.cb_image)
-	rospy.Subscriber("/touchence/sensor_data",Float32MultiArray,self.TouchSensorCallback)
-	self.steps=0
+        rospy.Subscriber("/touchence/sensor_data",Float32MultiArray,self.TouchSensorCallback)
+        self.steps=0
         self.bridge=CvBridge()
         self._imageBuffer = ImageBuffer()
         self.interval_para=1  #change here! 
