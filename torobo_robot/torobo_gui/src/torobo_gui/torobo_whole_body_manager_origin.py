@@ -4,9 +4,6 @@ import os
 import rospy
 import rosparam
 import rospkg
-import cv2
-import threading
-import csv
 
 from qt_gui.plugin import Plugin
 from python_qt_binding import loadUi
@@ -14,7 +11,6 @@ from python_qt_binding.QtWidgets import *
 from python_qt_binding.QtCore import *
 from python_qt_binding.QtGui import *
 
-from cv_bridge import CvBridge, CvBridgeError
 import numpy
 import yaml
 
@@ -34,41 +30,11 @@ from torobo_control import get_torobo_joint_state_client
 
 from torobo_common import repeat_get_param
 
-#Take photo, Add by Saito
-from sensor_msgs.msg import JointState
-from sensor_msgs.msg import Image
-from std_msgs.msg import Float32MultiArray
-lock = threading.Lock()
-class ImageBuffer(object):
-    def __init__(self):
-        self._image = None
-
-    def is_empty(self):
-        # Need Lock
-        with lock:
-            return self._image is None
-
-    def push_image(self, img):
-        # Need Lock
-        with lock:
-            self._image = img
-
-    def pop_image(self):
-        # Need Lock
-        with lock:
-            img = self._image
-            self._image = None
-            return img
 
 class ToroboWholeBodyManager(Plugin):
     def __init__(self, context):
         super(self.__class__, self).__init__(context)
         self.setObjectName('ToroboWholeBodyManager')
-        self._touch = None
-        
-        #Add by Saito
-        self.touch_file=None
-        self.touch_writer=None
 
         # Process standalone plugin command-line arguments
         from argparse import ArgumentParser
@@ -99,32 +65,6 @@ class ToroboWholeBodyManager(Plugin):
         self.serial_number = context.serial_number()
         ns = rospy.get_namespace()
         self.create(ns, 200)
-
-	#Add by Saito
-        rospy.Subscriber("/image_raw", Image, self.cb_image)
-        rospy.Subscriber("/touchence/sensor_data",Float32MultiArray,self.TouchSensorCallback)
-        self.steps=0
-        self.bridge=CvBridge()
-        self._imageBuffer = ImageBuffer()
-        self.interval_para=1  #change here! 
-        #If you want to do direct teaching and replay it, the parameter shoud be 1.
-        #If you want to collect data, it should be 4 (then, the interval of data driven changes to 1/4 of you command in the GUI).
-        
-        #Add by Shimizu
-        DATA_DIR = "/home/assimilation/TAKUMI_SHIMIZU/wiping_ws/src/wiping/data/"
-        self._img_dir = DATA_DIR + "img/"
-
-
-    #Add by Saito
-    def cb_image(self, image):
-        try:
-            self._imageBuffer.push_image(self.bridge.imgmsg_to_cv2(image, "bgr8"))           
-        except:
-            traceback.print_exc()
-
-    #Add by Saito
-    def TouchSensorCallback(self, data):
-        self._touch=data.data
 
     def shutdown_plugin(self):
         self.destroy()
@@ -299,7 +239,6 @@ class ToroboWholeBodyManager(Plugin):
         trajName = unicode(self._widget.lineEditTrajName.text())
         transitionTime = float(self._widget.doubleSpinBoxTransitionTime.text())
         recordInterval = float(self._widget.doubleSpinBoxRecordInterval.text())
-        recordInterval /= self.interval_para # SAITO 
 
         def CallClassServiceAllController(classDict, sleepTime=0.0):
             for (name, c) in classDict.items():
@@ -348,8 +287,6 @@ class ToroboWholeBodyManager(Plugin):
                 self._widget.buttonTrajRun.setEnabled(True)
         elif sender == self._widget.buttonTrajRun:
             self.MoveTeachingTrajectory(trajName)
-            self._widget.buttonTrajRecord.setText("Record\nStop")
-            self.StartTrajectoryRecord_for_retry(recordInterval) #Add by Saito
         elif sender == self._widget.buttonSaveRosParam:
             self.SaveRosParam()
         elif sender == self._widget.buttonLoadRosParam:
@@ -387,7 +324,6 @@ class ToroboWholeBodyManager(Plugin):
                 continue
             teaching_point_manager.MoveToTeachingPoint(self.nameSpace + name, tpName, transitionTime, timeout=0.5)
 
-    #Add by Saito
     def MoveTeachingTrajectory(self, trajName):
         if(self.moveTeachingTrajectoryActionServerConnection == False):
             # pre-connect to action server for avoiding delay
@@ -402,7 +338,6 @@ class ToroboWholeBodyManager(Plugin):
             if ("gripper" in name):
                 continue
             teaching_trajectory_manager.MoveToTeachingTrajectory(self.nameSpace + name, trajName, timeout=0.5)
-        print "retry"
 
     def StartTrajectoryRecord(self, recordInterval, startTimer=True):
         print "Record Start"
@@ -415,33 +350,10 @@ class ToroboWholeBodyManager(Plugin):
         self.recordIntervalMS = recordInterval * 1000.0
         if startTimer:
             self.recordTimer.start(self.recordIntervalMS)
-        files_in_path=os.listdir("/home/assimilation/touchsensor/")
-        number_of_files=len(files_in_path)
-        self.touch_file=open("/home/assimilation/touchsensor/"+str(number_of_files+1)+".csv",'w')
-        self.touch_writer=csv.writer(self.touch_file,lineterminator='\n')
-
-    def StartTrajectoryRecord_for_retry(self, recordInterval, startTimer=True):
-        print "Figure Record Start"
-        self.recordPoints = {}
-        for (name, dic) in self.controllerDict.items():
-            if ("gripper" in name):
-                continue
-            self.recordPoints[name] = []
-        self.recordPointsNum = 0	
-        self.steps=0
-        self.recordIntervalMS = recordInterval * 1000.0
-        if startTimer:
-            self.recordTimer.start(self.recordIntervalMS)
-        files_in_path=os.listdir("/home/assimilation/touchsensor/")
-        number_of_files=len(files_in_path)
-        self.touch_file=open("/home/assimilation/touchsensor/"+str(number_of_files+1)+".csv",'w')
-        self.touch_writer=csv.writer(self.touch_file,lineterminator='\n')
 
     def StopTrajectoryRecord(self):
         print "Record Stop"
         self.recordTimer.stop()
-        #Add by Saito
-        self.touch_file.close()
     
     def RecordTrajectory(self, trajName):
         for (name, dic) in self.controllerDict.items():
@@ -465,18 +377,6 @@ class ToroboWholeBodyManager(Plugin):
         point.velocities = toroboJointState.velocity
         point.accelerations = toroboJointState.acceleration
         point.effort = toroboJointState.effort
-        #touch sensor Add by Saito
-        #print self._touch
-        self.touch_writer.writerow(self._touch)
-
-	#camera Add by Saito
-    	if not self._imageBuffer.is_empty():
-                if self.steps%self.interval_para==0:
-		    cv_img = self._imageBuffer.pop_image()
-            #Change by Shimizu
-		    cv2.imwrite(self._img_dir + "{:0>4d}".format(self.steps/self.interval_para) + ".jpg", cv_img)
-		self.steps=self.steps+1
-
         return point
 
     def RecordOnePoint(self):
@@ -542,4 +442,3 @@ class eSystemMode:
 class eHighCtrlMode:
     TRAJ = 0
     EXTERNAL_FORCE_FOLLOWING = 5
-
