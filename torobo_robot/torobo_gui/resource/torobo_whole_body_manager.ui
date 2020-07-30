@@ -462,7 +462,7 @@ Home</string>
        <item>
         <widget class="QPushButton" name="buttonGoStart">
          <property name="text">
-          <string>first start posi</string>
+          <string>decide start posi</string>
          </property>
         </widget>
        </item>

@@ -113,8 +113,126 @@ class ToroboWholeBodyManager(Plugin):
         #Add by Shimizu
         DATA_DIR = "/home/assimilation/TAKUMI_SHIMIZU/wiping_ws/src/wiping/data/"
         self._img_dir = DATA_DIR + "img/"
-        self._mode = "teaching"
+        self._tactile_dir = DATA_DIR + "tactile/"
+        self._motion_dir = DATA_DIR + "motion/"
+        files_in_path=os.listdir(self._tactile_dir)
+        self._file_num = len(files_in_path)
 
+        self.clean_sensors()
+
+    #shuffled by Shimizu
+    def button_clicked(self):
+        sender = self.sender()
+        tpNum = int(self._widget.spinBoxTpNumber.text())
+        tpName = "tp" + str(tpNum)
+        trajName = unicode(self._widget.lineEditTrajName.text())
+        transitionTime = float(self._widget.doubleSpinBoxTransitionTime.text())
+        origin_recordInterval = float(self._widget.doubleSpinBoxRecordInterval.text())
+        recordInterval = origin_recordInterval / self.interval_para # SAITO 
+
+        def CallClassServiceAllController(classDict, sleepTime=0.0):
+            for (name, c) in classDict.items():
+                c.call_service("all")
+                rospy.sleep(sleepTime)
+
+        def CallClassServiceWithArgAllController(classDict, arg, sleepTime=0.0):
+            for (name, c) in classDict.items():
+                c.call_service("all", arg)
+                rospy.sleep(sleepTime)
+        if sender == self._widget.buttonAllServoOn:
+            CallClassServiceAllController(self.servoOnClient, sleepTime=0.2)
+        elif sender == self._widget.buttonAllServoOff:
+            CallClassServiceAllController(self.servoOffClient)
+        elif sender == self._widget.buttonAllErrorReset:
+            CallClassServiceAllController(self.errorResetClient)
+        elif sender == self._widget.buttonTeachingMode:
+            CallClassServiceWithArgAllController(self.setControlModeClient, "external_force_following")
+        elif sender == self._widget.buttonMovingMode:
+            CallClassServiceWithArgAllController(self.setControlModeClient, "position")
+        elif sender == self._widget.buttonGetTp:
+            self.RecordTp(tpName)
+            self._widget.spinBoxTpNumber.setValue(tpNum+1)
+        elif sender == self._widget.buttonMoveTp:
+            self.MoveTeachingPoint(tpName, transitionTime)
+            self._widget.spinBoxTpNumber.setValue(tpNum+1)
+        elif sender == self._widget.buttonGoHome:
+            self.GoHome(transitionTime)
+        elif sender == self._widget.buttonTrajRecord:
+            if self._widget.buttonTrajRecord.text() == "Record\nStart":
+                self._widget.buttonTrajRecord.setText("Record\nStop")
+                self._widget.buttonTrajRun.setEnabled(False)
+                self._widget.buttonTeachingMode.click()
+                self.StartTrajectoryRecord(recordInterval)
+            else:
+                self.StopTrajectoryRecord()
+                self.RecordTrajectory(trajName)
+                self._widget.buttonTrajRecord.setText("Record\nStart")
+                self._widget.buttonTrajRun.setEnabled(True)
+        elif sender == self._widget.buttonTrajRun:
+            self.MoveTeachingTrajectory(trajName)
+            self._widget.buttonTrajRecord.setText("Record\nStop")
+            self.StartTrajectoryRecord_for_retry(recordInterval) #Add by Saito
+        elif sender == self._widget.buttonSaveRosParam:
+            self.SaveRosParam()
+        elif sender == self._widget.buttonLoadRosParam:
+            self.LoadRosParam()
+
+
+        #Add by Shimizu
+        elif sender == self._widget.buttonGoStart:
+            # self.
+            STARTPOSI_TP = "tp" + str(99)
+            if self._widget.buttonGoStart.text() == "decide start posi":
+                #[TODO] I want to delete this. If I can extract the last position of start posi, 
+                # then I can delete this process.
+                self.RecordTp(STARTPOSI_TP)
+                self._widget.buttonGoStart.setText("go start posi")
+            elif self._widget.buttonGoStart.text() == "go start posi":
+                self._widget.buttonMovingMode.click()
+                self.MoveTeachingPoint(STARTPOSI_TP, transitionTime)
+                
+        elif sender ==self._widget.buttonTeach:
+            if self._widget.buttonTeach.text() == "teach start":
+                self._widget.buttonTeach.setText("teach stop")
+                self._widget.buttonTeachingMode.click()
+                self.restart_record(origin_recordInterval)
+            else:
+                self._widget.buttonTeach.setText("teach start")
+                self.recordTimer.stop()
+                self.RecordTrajectory(trajName)
+        elif sender == self._widget.buttonReplay:
+            if self._widget.buttonReplay.text() == "replay":
+                self._widget.buttonMovingMode.click()
+                self.clean_sensors()
+                self.interval_para = 4
+                self.StartTrajectoryRecord(origin_recordInterval / self.interval_para)
+                self.MoveTeachingTrajectory(trajName)
+                self._widget.buttonReplay.setText("save")
+            else:
+                self._widget.buttonReplay.setText("replay")
+                self.StopTrajectoryRecord()
+                self.RecordTrajectory(trajName)
+                self.save_sensors()
+                self.interval_para = 1
+                
+
+    #Add by Shimizu
+    def save_sensors(self):
+        file_name = "{:03d}".format(self._file_num)
+        self.save_rosparam2file(self._motion_dir + file_name + ".yaml")
+        with open(self._tactile_dir + file_name + ".csv", "w") as f:
+            touch_writer=csv.writer(f,lineterminator='\n')
+            touch_writer.writerows(self._tactile_buffer)
+        img_dir_path = self._img_dir + file_name
+        os.mkdir(img_dir_path)
+        for i, cv_img in enumerate(self._img_buffer):
+            cv2.imwrite(img_dir_path + "/{:03d}.jpg".format(i), cv_img)
+        self._file_num += 1
+
+    #Add by Shimizu
+    def clean_sensors(self):
+        self._tactile_buffer = []
+        self._img_buffer = []
 
     #Add by Saito
     def cb_image(self, image):
@@ -299,101 +417,7 @@ class ToroboWholeBodyManager(Plugin):
                 pal.setColor(QPalette.Foreground,modeColor)
                 self._widget.labelTorsoHeadMode.setPalette(pal)
 
-    def button_clicked(self):
-        sender = self.sender()
-        tpNum = int(self._widget.spinBoxTpNumber.text())
-        tpName = "tp" + str(tpNum)
-        trajName = unicode(self._widget.lineEditTrajName.text())
-        transitionTime = float(self._widget.doubleSpinBoxTransitionTime.text())
-        origin_recordInterval = float(self._widget.doubleSpinBoxRecordInterval.text())
-        recordInterval = origin_recordInterval / self.interval_para # SAITO 
-
-        def CallClassServiceAllController(classDict, sleepTime=0.0):
-            for (name, c) in classDict.items():
-                c.call_service("all")
-                rospy.sleep(sleepTime)
-
-        def CallClassServiceWithArgAllController(classDict, arg, sleepTime=0.0):
-            for (name, c) in classDict.items():
-                c.call_service("all", arg)
-                rospy.sleep(sleepTime)
-        if sender == self._widget.buttonAllServoOn:
-            CallClassServiceAllController(self.servoOnClient, sleepTime=0.2)
-        elif sender == self._widget.buttonAllServoOff:
-            CallClassServiceAllController(self.servoOffClient)
-        elif sender == self._widget.buttonAllErrorReset:
-            CallClassServiceAllController(self.errorResetClient)
-        elif sender == self._widget.buttonTeachingMode:
-            CallClassServiceWithArgAllController(self.setControlModeClient, "external_force_following")
-        elif sender == self._widget.buttonMovingMode:
-            CallClassServiceWithArgAllController(self.setControlModeClient, "position")
-        elif sender == self._widget.buttonGetTp:
-            self.GoTp(tpName)
-            self._widget.spinBoxTpNumber.setValue(tpNum+1)
-        elif sender == self._widget.buttonMoveTp:
-            self.MoveTeachingPoint(tpName, transitionTime)
-            self._widget.spinBoxTpNumber.setValue(tpNum+1)
-        elif sender == self._widget.buttonGoHome:
-            self.GoHome(transitionTime)
-        elif sender == self._widget.buttonTrajRecord:
-            if self._widget.buttonTrajRecord.text() == "Record\nStart":
-                self._widget.buttonTrajRecord.setText("Record\nStop")
-                self._widget.buttonTrajRun.setEnabled(False)
-                self._widget.buttonTeachingMode.click()
-                self.StartTrajectoryRecord(recordInterval)
-            else:
-                self.StopTrajectoryRecord()
-                self.RecordTrajectory(trajName)
-                self._widget.buttonTrajRecord.setText("Record\nStart")
-                self._widget.buttonTrajRun.setEnabled(True)
-        elif sender == self._widget.buttonTrajRun:
-            self.MoveTeachingTrajectory(trajName)
-            self._widget.buttonTrajRecord.setText("Record\nStop")
-            self.StartTrajectoryRecord_for_retry(recordInterval) #Add by Saito
-        elif sender == self._widget.buttonSaveRosParam:
-            self.SaveRosParam()
-        elif sender == self._widget.buttonLoadRosParam:
-            self.LoadRosParam()
-
-
-        #Add by Shimizu
-        elif sender == self._widget.buttonGoStart:
-            # self.
-            STARTPOSI_TP = "tp" + str(99)
-            if self._widget.buttonGoStart.text() == "first start posi":
-                self._widget.buttonLoadRosParam.click()
-                self._widget.buttonMovingMode.click()
-                self.MoveTeachingTrajectory(trajName)
-                self._widget.buttonGoStart.setText("finish move")
-            elif self._widget.buttonGoStart.text() == "finish move":
-                #[TODO] I want to delete this. If I can extract the last position of start posi, 
-                # then I can delete this process.
-                self.GoTp(STARTPOSI_TP)
-                self._widget.buttonGoStart.setText("go start posi")
-            elif self._widget.buttonGoStart.text() == "go start posi":
-                self._widget.buttonMovingMode.click()
-                self.MoveTeachingPoint(STARTPOSI_TP, transitionTime)
-                
-        elif sender ==self._widget.buttonTeach:
-            if self._widget.buttonTeach.text() == "teach start":
-                self._widget.buttonTeach.setText("teach stop")
-                self._widget.buttonTeachingMode.click()
-                self.restart_record(origin_recordInterval)
-                self._mode = "teaching"
-            else:
-                self._widget.buttonTeach.setText("teach start")
-                #[TODO] 
-                # back to start posi
-                # teach finish
-                self.recordTimer.stop()
-                self.RecordTrajectory(trajName)
-        elif sender == self._widget.buttonReplay:
-            self._widget.buttonMovingMode.click()
-            self.MoveTeachingTrajectory(trajName)
-            # self.StartTrajectoryRecord_for_retry(recordInterval) #Add by Saito
-            # retrace like traj run
-
-    def GoTp(self,tpName):
+    def RecordTp(self,tpName):
         for (name, dic) in self.controllerDict.items():
             if ("gripper" in name):
                 continue
@@ -450,6 +474,7 @@ class ToroboWholeBodyManager(Plugin):
             teaching_trajectory_manager.MoveToTeachingTrajectory(self.nameSpace + name, trajName, timeout=0.5)
         print "retry"
 
+    #Add by Shimizu
     def restart_record(self,recordInterval):
         
         self.recordPoints = {}
@@ -467,7 +492,8 @@ class ToroboWholeBodyManager(Plugin):
         files_in_path=os.listdir("/home/assimilation/touchsensor/")
         number_of_files=len(files_in_path)
         self.touch_file=open("/home/assimilation/touchsensor/"+str(number_of_files+1)+".csv",'w')
-        self.touch_writer=csv.writer(self.touch_file,lineterminator='\n')
+        #Change by Shimizu
+        # self.touch_writer=csv.writer(self.touch_file,lineterminator='\n')
 
     def StartTrajectoryRecord_for_retry(self, recordInterval, startTimer=True):
         print "Figure Record Start"
@@ -475,7 +501,8 @@ class ToroboWholeBodyManager(Plugin):
         files_in_path=os.listdir("/home/assimilation/touchsensor/")
         number_of_files=len(files_in_path)
         self.touch_file=open("/home/assimilation/touchsensor/"+str(number_of_files+1)+".csv",'w')
-        self.touch_writer=csv.writer(self.touch_file,lineterminator='\n')
+        #Change by Shimizu
+        # self.touch_writer=csv.writer(self.touch_file,lineterminator='\n')
 
     def StopTrajectoryRecord(self):
         print "Record Stop"
@@ -506,17 +533,18 @@ class ToroboWholeBodyManager(Plugin):
         point.accelerations = toroboJointState.acceleration
         point.effort = toroboJointState.effort
         #touch sensor Add by Saito
-        #print self._touch
-        if self._mode != "teaching":
+        if self.touch_writer is not None:
             self.touch_writer.writerow(self._touch)
+        #Add by Shimizu
+        self._tactile_buffer.append(self._touch)
 
 	#camera Add by Saito
     	if not self._imageBuffer.is_empty():
-                if self.steps%self.interval_para==0:
-		    cv_img = self._imageBuffer.pop_image()
-            #Change by Shimizu
-		    cv2.imwrite(self._img_dir + "{:0>4d}".format(self.steps/self.interval_para) + ".jpg", cv_img)
-		self.steps=self.steps+1
+            if self.steps%self.interval_para==0:
+                cv_img = self._imageBuffer.pop_image()
+                self._img_buffer.append(cv_img)
+                cv2.imwrite("/home/assimilation/cameratest/test/{:0>4d}".format(self.steps/self.interval_para) + ".jpg", cv_img)
+        self.steps=self.steps+1
 
         return point
 
@@ -537,9 +565,7 @@ class ToroboWholeBodyManager(Plugin):
         self._widget.lcdNumberRecordTime.display(str(self.recordTime))
         self._widget.lcdNumberRecordedPoints.display(str(self.recordPointsNum))
 
-    def SaveRosParam(self):
-        loadfile = QFileDialog.getSaveFileName(self._widget, "Save rosparam", "~/torobo_teaching_param.yaml", "Yaml (*.yaml)")
-        fileName = loadfile[0]
+    def save_rosparam2file(self, fileName):
         if fileName != "":
             param = {}
             for (name, dic) in self.controllerDict.items():
@@ -558,6 +584,11 @@ class ToroboWholeBodyManager(Plugin):
             rospy.loginfo("Saved rosparam to [%s]" % fileName)
         else:
             rospy.loginfo("Not saved")
+
+    def SaveRosParam(self):
+        loadfile = QFileDialog.getSaveFileName(self._widget, "Save rosparam", "~/torobo_teaching_param.yaml", "Yaml (*.yaml)")
+        fileName = loadfile[0]
+        self.save_rosparam2file(fileName)
 
     def LoadRosParamFile(self, fileName):
         if(os.path.exists(fileName) == False):
