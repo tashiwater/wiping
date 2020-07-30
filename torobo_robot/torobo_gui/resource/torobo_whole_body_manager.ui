@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>591</width>
-    <height>349</height>
+    <width>603</width>
+    <height>392</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -457,22 +457,34 @@ Home</string>
        </item>
       </layout>
      </item>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_shimizu">
+       <item>
+        <widget class="QPushButton" name="buttonGoStart">
+         <property name="text">
+          <string>first start posi</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="buttonTeach">
+         <property name="text">
+          <string>teach start</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="buttonReplay">
+         <property name="text">
+          <string>replay</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
     </layout>
    </item>
   </layout>
-  <zorder>pushButton</zorder>
-  <zorder>gridLayoutWidget_2</zorder>
-  <zorder>gridLayoutWidget</zorder>
-  <zorder>horizontalLayoutWidget</zorder>
-  <zorder>buttonAllErrorReset</zorder>
-  <zorder>buttonGoHome</zorder>
-  <zorder>gridLayoutWidget_3</zorder>
-  <zorder>verticalLayoutWidget</zorder>
-  <zorder>gridLayoutWidget_4</zorder>
-  <zorder>horizontalSpacer</zorder>
-  <zorder>labelRecordedPoints</zorder>
-  <zorder>horizontalSpacer_2</zorder>
-  <zorder>label_3</zorder>
  </widget>
  <resources/>
  <connections/>

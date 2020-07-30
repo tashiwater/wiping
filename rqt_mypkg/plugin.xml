@@ -1,0 +1,58 @@
+<library path="src">
+  <class name="ToroboStateViewer" type="torobo_gui.torobo_state_viewer.ToroboStateViewer" base_class_type="rqt_gui_py::Plugin">
+    <description>
+      Torobo State Viewer App
+    </description>
+    <qtgui>
+      <group>
+	      <label>ToroboGui</label>
+        <icon type="theme">folder</icon>
+      </group>
+      <label>Torobo State Viewer</label>
+      <icon type="theme">applications-other</icon>
+      <statustip>Torobo State Viwer App</statustip>
+    </qtgui>
+  </class>
+  <class name="ToroboTeachingManager" type="torobo_gui.torobo_teaching_manager.ToroboTeachingManager" base_class_type="rqt_gui_py::Plugin">
+    <description>
+      Torobo Teaching Manager App
+    </description>
+    <qtgui>
+      <group>
+	      <label>ToroboGui</label>
+        <icon type="theme">folder</icon>
+      </group>
+      <label>Torobo Teaching Manager</label>
+      <icon type="theme">applications-other</icon>
+      <statustip>Torobo Teaching Manager App</statustip>
+    </qtgui>
+  </class>
+  <class name="ToroboWholeBodyManager" type="torobo_gui.torobo_whole_body_manager.ToroboWholeBodyManager" base_class_type="rqt_gui_py::Plugin">
+    <description>
+      Torobo Whole Body Manager App
+    </description>
+    <qtgui>
+      <group>
+	      <label>ToroboGui</label>
+        <icon type="theme">folder</icon>
+      </group>
+      <label>Torobo Whole Body Manager</label>
+      <icon type="theme">applications-other</icon>
+      <statustip>Torobo Whole Body Manager App</statustip>
+    </qtgui>
+  </class>
+  <class name="ToroboJointController" type="torobo_gui.torobo_joint_controller.ToroboJointController" base_class_type="rqt_gui_py::Plugin">
+    <description>
+      Torobo Joint Controller App
+    </description>
+    <qtgui>
+      <group>
+	      <label>ToroboGui</label>
+        <icon type="theme">folder</icon>
+      </group>
+      <label>Torobo Joint Controller</label>
+      <icon type="theme">applications-other</icon>
+      <statustip>Torobo Joint Controller App</statustip>
+    </qtgui>
+  </class>
+</library>
