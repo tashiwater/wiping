@@ -111,14 +111,46 @@ class ToroboWholeBodyManager(Plugin):
         #If you want to collect data, it should be 4 (then, the interval of data driven changes to 1/4 of you command in the GUI).
         
         #Add by Shimizu
-        DATA_DIR = "/home/assimilation/TAKUMI_SHIMIZU/wiping_ws/src/wiping/data/"
-        self._img_dir = DATA_DIR + "img/"
-        self._tactile_dir = DATA_DIR + "tactile/"
-        self._motion_dir = DATA_DIR + "motion/"
-        files_in_path=os.listdir(self._tactile_dir)
+        self._data_dir = "/home/assimilation/TAKUMI_SHIMIZU/wiping_ws/src/wiping/data/"
+        OUTPUT_DIR = self._data_dir +"output/"
+        self._img_dir = OUTPUT_DIR + "img/"
+        self._tactile_dir = OUTPUT_DIR + "tactile/"
+        self._motion_dir = OUTPUT_DIR + "motion/"
+        self._direct_dir = OUTPUT_DIR + "direct/"
+        files_in_path=os.listdir(self._img_dir)
         self._file_num = len(files_in_path)
-
         self.clean_sensors()
+
+        self._default_tactilebar = """
+        QProgressBar{
+            border: 2px solid grey;
+            border-radius: 5px;
+            text-align: center
+        }
+
+        QProgressBar::chunk {
+            background-color: lightblue;
+            width: 10px;
+            margin: 1px;
+        }"""
+        self._high_tactilebar = """
+        QProgressBar{
+            border: 2px solid grey;
+            border-radius: 5px;
+            text-align: center
+        }
+
+        QProgressBar::chunk {
+            background-color: red;
+            width: 10px;
+            margin: 1px;
+        }
+        """
+        self._bar_update_count = 0
+        self._bar_state = [None for i in range(4)]
+        self._touchbar_list = [self._widget.tactileBar1, self._widget.tactileBar2, self._widget.tactileBar3, self._widget.tactileBar4]
+        # rospy.loginfo("file num : ", self._file_num)
+        rospy.loginfo("file num : {}".format( self._file_num))
 
     #shuffled by Shimizu
     def button_clicked(self):
@@ -190,6 +222,8 @@ class ToroboWholeBodyManager(Plugin):
             elif self._widget.buttonGoStart.text() == "go start posi":
                 self._widget.buttonMovingMode.click()
                 self.MoveTeachingPoint(STARTPOSI_TP, transitionTime)
+
+
                 
         elif sender ==self._widget.buttonTeach:
             if self._widget.buttonTeach.text() == "teach start":
@@ -200,6 +234,8 @@ class ToroboWholeBodyManager(Plugin):
                 self._widget.buttonTeach.setText("teach start")
                 self.recordTimer.stop()
                 self.RecordTrajectory(trajName)
+                file_name = "{:03d}".format(self._file_num)
+                self.save_rosparam2file(self._direct_dir +file_name + ".yaml")
         elif sender == self._widget.buttonReplay:
             if self._widget.buttonReplay.text() == "replay":
                 self._widget.buttonMovingMode.click()
@@ -240,10 +276,28 @@ class ToroboWholeBodyManager(Plugin):
             self._imageBuffer.push_image(self.bridge.imgmsg_to_cv2(image, "bgr8"))           
         except:
             traceback.print_exc()
-
-    #Add by Saito
+    
+    #Add by Shimizu
     def TouchSensorCallback(self, data):
         self._touch=data.data
+        # self._bar_update_count+=1
+        # if self._bar_update_count >=8 :
+        #     self._bar_update_count = 0
+        #     for i in  range(len(self._touchbar_list)):  #enumerate(self._touchbar_list):
+        #         targetbar  = self._touchbar_list[i]
+        #         max_data = max(data.data[i*4 : i*4 + 4])*100
+        #         targetbar.setValue(max_data)
+        #         old_state = self._bar_state[i]
+        #         if max_data > 25 :
+        #             state = "high"
+        #             if old_state != state:
+        #                 targetbar.setStyleSheet( self._high_tactilebar)
+        #         else:
+        #             state = "default"
+        #             if old_state != state:
+        #                 targetbar.setStyleSheet(self._default_tactilebar)
+        #         self._bar_state[i] = state
+            
 
     def shutdown_plugin(self):
         self.destroy()
@@ -586,7 +640,7 @@ class ToroboWholeBodyManager(Plugin):
             rospy.loginfo("Not saved")
 
     def SaveRosParam(self):
-        loadfile = QFileDialog.getSaveFileName(self._widget, "Save rosparam", "~/torobo_teaching_param.yaml", "Yaml (*.yaml)")
+        loadfile = QFileDialog.getSaveFileName(self._widget, "Save rosparam", self._data_dir, "Yaml (*.yaml)")
         fileName = loadfile[0]
         self.save_rosparam2file(fileName)
 
@@ -600,7 +654,7 @@ class ToroboWholeBodyManager(Plugin):
         rospy.loginfo("Loaded rosparam from [%s]" % fileName)
 
     def LoadRosParam(self):
-        loadfile = QFileDialog.getOpenFileName(self._widget, "Please select loading rosparam yaml file", "~/", "Yaml (*.yaml)")
+        loadfile = QFileDialog.getOpenFileName(self._widget, "Please select loading rosparam yaml file", self._data_dir, "Yaml (*.yaml)")
         fileName = loadfile[0]
         self.LoadRosParamFile(fileName)
         

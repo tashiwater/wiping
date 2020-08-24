@@ -13,7 +13,7 @@ class TouchenceSensor(object):
         self.ser = serial.Serial(args[0], 115200, timeout=0.1)
     
     def init(self):
-        self._sensor_num = 6 #int(input("num sensor: "))
+        self._sensor_num = 4 #int(input("num sensor: "))
         self.sensor_initialize()
 
         self.sensor_data = Float32MultiArray()
