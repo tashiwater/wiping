@@ -13,6 +13,7 @@ from python_qt_binding import loadUi
 from python_qt_binding.QtWidgets import *
 from python_qt_binding.QtCore import *
 from python_qt_binding.QtGui import *
+from PyQt5 import QtCore
 
 from cv_bridge import CvBridge, CvBridgeError
 import numpy
@@ -151,7 +152,29 @@ class ToroboWholeBodyManager(Plugin):
         self._touchbar_list = [self._widget.tactileBar1, self._widget.tactileBar2, self._widget.tactileBar3, self._widget.tactileBar4]
         # rospy.loginfo("file num : ", self._file_num)
         rospy.loginfo("file num : {}".format( self._file_num))
+        self._on_tactile = False
 
+    def initMainForm(self):
+        # button
+        self._widget.buttonAllServoOn.clicked.connect(self.button_clicked)
+        self._widget.buttonAllServoOff.clicked.connect(self.button_clicked)
+        self._widget.buttonAllErrorReset.clicked.connect(self.button_clicked)
+        self._widget.buttonTeachingMode.clicked.connect(self.button_clicked)
+        self._widget.buttonMovingMode.clicked.connect(self.button_clicked)
+        self._widget.buttonGoHome.clicked.connect(self.button_clicked)
+        self._widget.buttonGetTp.clicked.connect(self.button_clicked)
+        self._widget.buttonMoveTp.clicked.connect(self.button_clicked)
+        self._widget.buttonTrajRecord.clicked.connect(self.button_clicked)
+        self._widget.buttonTrajRun.clicked.connect(self.button_clicked)
+        self._widget.buttonSaveRosParam.clicked.connect(self.button_clicked)
+        self._widget.buttonLoadRosParam.clicked.connect(self.button_clicked)
+
+        #Add by shimizu
+        self._widget.buttonTeach.clicked.connect(self.button_clicked)
+        self._widget.buttonReplay.clicked.connect(self.button_clicked)
+        self._widget.buttonGoStart.clicked.connect(self.button_clicked)
+        self._widget.replayCancel.clicked.connect(self.button_clicked)
+        self._widget.tactileOnOff.stateChanged.connect(self.tactileOnOff_cb)
     #shuffled by Shimizu
     def button_clicked(self):
         sender = self.sender()
@@ -227,15 +250,19 @@ class ToroboWholeBodyManager(Plugin):
                 
         elif sender ==self._widget.buttonTeach:
             if self._widget.buttonTeach.text() == "teach start":
-                self._widget.buttonTeach.setText("teach stop")
                 self._widget.buttonTeachingMode.click()
                 self.restart_record(origin_recordInterval)
+                self._widget.buttonTeach.setText("go start posi")
+            elif self._widget.buttonTeach.text() == "go start posi":
+                self._widget.buttonGoStart.click()
+                self._widget.buttonTeach.setText("teach stop")
             else:
                 self._widget.buttonTeach.setText("teach start")
                 self.recordTimer.stop()
                 self.RecordTrajectory(trajName)
                 file_name = "{:03d}".format(self._file_num)
                 self.save_rosparam2file(self._direct_dir +file_name + ".yaml")
+
         elif sender == self._widget.buttonReplay:
             if self._widget.buttonReplay.text() == "replay":
                 self._widget.buttonMovingMode.click()
@@ -250,7 +277,11 @@ class ToroboWholeBodyManager(Plugin):
                 self.RecordTrajectory(trajName)
                 self.save_sensors()
                 self.interval_para = 1
-                
+        elif sender == self._widget.replayCancel:
+                self.StopTrajectoryRecord()
+                self.RecordTrajectory(trajName)
+                self.interval_para = 1
+                self._widget.buttonReplay.setText("replay")
 
     #Add by Shimizu
     def save_sensors(self):
@@ -280,23 +311,24 @@ class ToroboWholeBodyManager(Plugin):
     #Add by Shimizu
     def TouchSensorCallback(self, data):
         self._touch=data.data
-        # self._bar_update_count+=1
-        # if self._bar_update_count >=8 :
-        #     self._bar_update_count = 0
-        #     for i in  range(len(self._touchbar_list)):  #enumerate(self._touchbar_list):
-        #         targetbar  = self._touchbar_list[i]
-        #         max_data = max(data.data[i*4 : i*4 + 4])*100
-        #         targetbar.setValue(max_data)
-        #         old_state = self._bar_state[i]
-        #         if max_data > 25 :
-        #             state = "high"
-        #             if old_state != state:
-        #                 targetbar.setStyleSheet( self._high_tactilebar)
-        #         else:
-        #             state = "default"
-        #             if old_state != state:
-        #                 targetbar.setStyleSheet(self._default_tactilebar)
-        #         self._bar_state[i] = state
+        if self._on_tactile:
+            self._bar_update_count+=1
+            if self._bar_update_count >=8 :
+                self._bar_update_count = 0
+                for i in  range(len(self._touchbar_list)):  #enumerate(self._touchbar_list):
+                    targetbar  = self._touchbar_list[i]
+                    max_data = max(data.data[i*4 : i*4 + 4])*100
+                    targetbar.setValue(max_data)
+                    old_state = self._bar_state[i]
+                    if max_data > 25 :
+                        state = "high"
+                        if old_state != state:
+                            targetbar.setStyleSheet( self._high_tactilebar)
+                    else:
+                        state = "default"
+                        if old_state != state:
+                            targetbar.setStyleSheet(self._default_tactilebar)
+                    self._bar_state[i] = state
             
 
     def shutdown_plugin(self):
@@ -387,25 +419,12 @@ class ToroboWholeBodyManager(Plugin):
             self.errorResetClient[k] = error_reset_client.ErrorResetClient(self.nameSpace + k)
             self.setControlModeClient[k] = set_control_mode_client.SetControlModeClient(self.nameSpace + k)
     
-    def initMainForm(self):
-        # button
-        self._widget.buttonAllServoOn.clicked.connect(self.button_clicked)
-        self._widget.buttonAllServoOff.clicked.connect(self.button_clicked)
-        self._widget.buttonAllErrorReset.clicked.connect(self.button_clicked)
-        self._widget.buttonTeachingMode.clicked.connect(self.button_clicked)
-        self._widget.buttonMovingMode.clicked.connect(self.button_clicked)
-        self._widget.buttonGoHome.clicked.connect(self.button_clicked)
-        self._widget.buttonGetTp.clicked.connect(self.button_clicked)
-        self._widget.buttonMoveTp.clicked.connect(self.button_clicked)
-        self._widget.buttonTrajRecord.clicked.connect(self.button_clicked)
-        self._widget.buttonTrajRun.clicked.connect(self.button_clicked)
-        self._widget.buttonSaveRosParam.clicked.connect(self.button_clicked)
-        self._widget.buttonLoadRosParam.clicked.connect(self.button_clicked)
-
-        #Add by shimizu
-        self._widget.buttonTeach.clicked.connect(self.button_clicked)
-        self._widget.buttonReplay.clicked.connect(self.button_clicked)
-        self._widget.buttonGoStart.clicked.connect(self.button_clicked)
+    # Add by Shimizu
+    def tactileOnOff_cb(self, state):
+        if state == QtCore.Qt.Checked:
+            self._on_tactile = True
+        else:
+            self._on_tactile = False
 
 
     def update(self):
@@ -471,7 +490,7 @@ class ToroboWholeBodyManager(Plugin):
                 pal.setColor(QPalette.Foreground,modeColor)
                 self._widget.labelTorsoHeadMode.setPalette(pal)
 
-    def RecordTp(self,tpName):
+    def RecordTp(self,tpName):  
         for (name, dic) in self.controllerDict.items():
             if ("gripper" in name):
                 continue

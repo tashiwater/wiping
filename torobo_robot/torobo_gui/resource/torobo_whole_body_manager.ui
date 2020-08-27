@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>603</width>
+    <width>746</width>
     <height>432</height>
    </rect>
   </property>
@@ -468,6 +468,12 @@ Home</string>
        </item>
        <item>
         <widget class="QPushButton" name="buttonTeach">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
          <property name="text">
           <string>teach start</string>
          </property>
@@ -480,6 +486,13 @@ Home</string>
          </property>
         </widget>
        </item>
+       <item>
+        <widget class="QPushButton" name="replayCancel">
+         <property name="text">
+          <string>cancel</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </item>
     </layout>
@@ -487,14 +500,30 @@ Home</string>
    <item>
     <layout class="QVBoxLayout" name="verticalLayout_5">
      <item>
+      <widget class="QCheckBox" name="tactileOnOff">
+       <property name="text">
+        <string>tactile bar</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QProgressBar" name="tactileBar1">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
        <property name="value">
         <number>24</number>
+       </property>
+       <property name="textVisible">
+        <bool>true</bool>
        </property>
       </widget>
      </item>
      <item>
       <widget class="QProgressBar" name="tactileBar2">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
        <property name="value">
         <number>24</number>
        </property>
@@ -502,6 +531,9 @@ Home</string>
      </item>
      <item>
       <widget class="QProgressBar" name="tactileBar3">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
        <property name="value">
         <number>24</number>
        </property>
@@ -509,6 +541,9 @@ Home</string>
      </item>
      <item>
       <widget class="QProgressBar" name="tactileBar4">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
        <property name="value">
         <number>24</number>
        </property>
