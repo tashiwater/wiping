@@ -8,5 +8,6 @@
     <!-- <include file="$(find torobo_gui)/launch/torobo_whole_body_manager.launch"/> -->
     <!-- <node pkg="touchence" name="sensing" type="sensing.py"/> -->
     <node pkg="uvc_camera" name="uvc_camera_node" type="uvc_camera_node"/>
+    <node pkg="rqt_mypkg" name="tactilebar" type="tactilebar.py"/>
 
 </launch>
