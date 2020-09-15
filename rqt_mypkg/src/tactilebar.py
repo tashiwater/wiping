@@ -75,6 +75,8 @@ class TactileBar(QWidget):
 
 
     def update_bar(self):
+        if rospy.is_shutdown():
+            self.exec_()
         if self._touch is None:
             return
         for i in  range(len(self._touchbar_list)):  #enumerate(self._touchbar_list):

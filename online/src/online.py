@@ -12,7 +12,7 @@ import rospy
 
 from mydataset import OnlineDataSet as MyDataSet
 from MTRNN import MTRNN
-from CAE import Net as CAE
+from CAE import CAEwithAttention as CAE
 from torobo_func import follow_trajectory
 
 rospy.init_node("online")
@@ -26,20 +26,20 @@ RESULT_DIR = DATA_DIR + "result/"
 MODEL_DIR = DATA_DIR + "model/"
 
 cae = CAE()
-cae_path = MODEL_DIR + "CAE/20200831_121336_250finish.pth"
+cae_path = MODEL_DIR + "CAE/model500.pth"
 checkpoint = torch.load(cae_path)
-cae.load_state_dict(checkpoint["model"])
+cae.load_state_dict(checkpoint)
 
 high_freq = 1
 dataset = MyDataSet(cae, device=torch.device("cuda:0"), high_freq=high_freq)
 
 in_size = 50
 net = MTRNN(
-    layer_size={"in": in_size, "out": in_size, "io": 34, "cf": 160, "cs": 13},
-    tau={"tau_io": 2, "tau_cf": 5, "tau_cs": 50},
+    layer_size={"in": in_size, "out": in_size, "io": 34, "cf": 200, "cs": 15},
+    tau={"tau_io": 2, "tau_cf": 5, "tau_cs": 70},
     open_rate=1,
 )
-model_path = MODEL_DIR + "MTRNN/20200902_153012_9000finish.pth"
+model_path = MODEL_DIR + "MTRNN/model/cs70/20200913_165013_33500.pth"
 checkpoint = torch.load(model_path)
 net.load_state_dict(checkpoint["model"])
 
@@ -53,9 +53,9 @@ cf_states = []
 cs_states = []
 hz = 10
 rate = rospy.Rate(hz * high_freq)
-end_step = 20*hz * high_freq
+end_step = 30*hz * high_freq
 motion_count = 0
-start_frame = 0#10 * high_freq
+start_frame = +10#10 * high_freq
 
 while not rospy.is_shutdown() and motion_count < end_step:
     motion_count += 1
@@ -86,6 +86,8 @@ while not rospy.is_shutdown() and motion_count < end_step:
             # cs_states = np.array(cs_states)
 
     rate.sleep()
+
+dataset.save_inputs()
     # np_output = outputs.view(-1, dataset[0][0].shape[1]).detach().numpy()
     # cs_pca = PCA(n_components=2).fit_transform(cs_states)
     # cf_pca = PCA(n_components=2).fit_transform(cf_states)

@@ -9,9 +9,10 @@ from cv_bridge import CvBridge, CvBridgeError
 import torch
 import torchvision
 import numpy as np
+import pandas as pd
 import cv2
 import PIL
-
+import datetime
 
 class OnlineDataSet:
     def __init__(self, cae, device, high_freq):
@@ -55,6 +56,8 @@ class OnlineDataSet:
         self._last_tactile  = None
         self._last_img = None
         self._connected_data = None
+        self._connected_datas = []
+        self._decoded_datas = []
 
     def cal_high_freq(self):
         if self._last_tactile is None:
@@ -70,14 +73,13 @@ class OnlineDataSet:
         if self._last_img is None:
             return
         # log
-        self.cal_high_freq()
         self._imgs.append(self._last_img)
         # extract feature
         position = self._get_mean(self._positions[-self._high_freq :])
         effort = self._get_mean(self._efforts[-self._high_freq :])
         tactile = self._get_mean(self._tactiles[-self._high_freq :])
         img_feature = self.get_img_feature(self._imgs[-1])
-
+        
         tactile_before_scale = [[0, 1] for _ in tactile]
         img_before_scale = [[0, 1] for _ in img_feature]
 
@@ -90,13 +92,16 @@ class OnlineDataSet:
             [position, effort, tactile,img_feature]
         )
         self._connected_data = torch.tensor(connected_data).float()
+        self._connected_datas.append(connected_data)
+
+
     def get_connected_data(self):
         return self._connected_data
 
     def cb_image(self, data):
         img = self._bridge.imgmsg_to_cv2(data, "rgb8")
-        img = cv2.resize(img, dsize=(96,128))
         img = PIL.Image.fromarray(img)
+        img = img.resize((128, 96))
         self._last_img = img
 
     def TouchSensorCallback(self, data):
@@ -110,8 +115,14 @@ class OnlineDataSet:
         img_tensor = torchvision.transforms.ToTensor()(img)
         img_tensor = torch.unsqueeze(img_tensor,0)
         # img_tensor = img_tensor.to(self._device)
-        img_feature = self._cae.encoder(img_tensor)
+        img_feature, box_class = self._cae.encoder(img_tensor)
+
+        val, class_num = torch.max(box_class, 1)
+        print(val,class_num)
         # img_feature = torch.zeros(size = (1,20))
+        img = self._cae.decoder(img_feature)
+        rgb = torchvision.transforms.functional.to_pil_image(img[0], "RGB")
+        self._decoded_datas.append(rgb)
         return img_feature.to("cpu").detach().numpy()[0]
 
     def _each_normalization(self, data, indataRange, outdataRange=[-0.9, 0.9]):
@@ -132,7 +143,7 @@ class OnlineDataSet:
             ret.append(self._each_normalization(d, before, after))
         return ret
 
-    def get_header(self, add_word):
+    def get_header(self, add_word = ""):
         return (
             [add_word + "position{}".format(i) for i in range(7)]
             + [add_word + "torque{}".format(i) for i in range(7)]
@@ -142,4 +153,23 @@ class OnlineDataSet:
     
     def reverse_position(self, position):
         return self.normalize(position, [-1, 1], self._position_before_scale)
+    
+    # def save_last_log(self):
+
+
+    def save_inputs(self):
+        data_dir = "/home/assimilation/TAKUMI_SHIMIZU/wiping_ws/src/wiping/online/data/"
+
+        log_dir = data_dir + "log/"
+
+        header = self.get_header()
+        df = pd.DataFrame(data=self._connected_datas, columns=header)
+        now = datetime.datetime.now()
+        filename = log_dir + "input/" + now.strftime("%Y%m%d_%H%M%S") + ".csv"
+        df.to_csv(filename, index=False)
+
+        for i, img in enumerate(self._imgs):
+            img.save(log_dir + "input_img/{:03d}.jpg".format(i))
+            self._decoded_datas[i].save(log_dir + "decoded/{:03d}.jpg".format(i))
+            
 

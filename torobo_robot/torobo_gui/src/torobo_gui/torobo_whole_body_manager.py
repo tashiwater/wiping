@@ -114,9 +114,9 @@ class ToroboWholeBodyManager(Plugin):
         #Add by Shimizu
         self._data_dir = "/home/assimilation/TAKUMI_SHIMIZU/wiping_ws/src/wiping/data/"
         OUTPUT_DIR = self._data_dir +"output/"
-        self._img_dir = OUTPUT_DIR + "img/"
-        self._tactile_dir = OUTPUT_DIR + "tactile/"
-        self._motion_dir = OUTPUT_DIR + "motion/"
+        self._img_dir = OUTPUT_DIR + "image_raw/"
+        self._tactile_dir = OUTPUT_DIR + "tactile_raw/"
+        self._motion_dir = OUTPUT_DIR + "motion_yaml/"
         self._direct_dir = OUTPUT_DIR + "direct/"
         files_in_path=os.listdir(self._img_dir)
         self._file_num = len(files_in_path)
