@@ -12,12 +12,13 @@ import rospy
 
 from mydataset import OnlineDataSet as MyDataSet
 from MTRNN import MTRNN
-from CAE import CAEwithAttention as CAE
+from CAE import CAE as CAE
 from torobo_func import follow_trajectory
 
 rospy.init_node("online")
 ACTION_SERVICE_NAME = "/torobo/arm_controller/follow_joint_trajectory"
-JOINT_NAMES = ["arm/joint_" + str(i) for i in range(1, 8)]  # from joint_1 to joint_8
+JOINT_NAMES = ["arm/joint_" + str(i)
+               for i in range(1, 8)]  # from joint_1 to joint_8
 TIME_INTERVAL = 1
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -26,9 +27,9 @@ RESULT_DIR = DATA_DIR + "result/"
 MODEL_DIR = DATA_DIR + "model/"
 
 cae = CAE()
-cae_path = MODEL_DIR + "CAE/model500.pth"
+cae_path = MODEL_DIR + "CAE/argumentation1/20200924_210301_1500.pth"
 checkpoint = torch.load(cae_path)
-cae.load_state_dict(checkpoint)
+cae.load_state_dict(checkpoint["model"])
 
 high_freq = 1
 dataset = MyDataSet(cae, device=torch.device("cuda:0"), high_freq=high_freq)
@@ -39,7 +40,7 @@ net = MTRNN(
     tau={"tau_io": 2, "tau_cf": 5, "tau_cs": 70},
     open_rate=1,
 )
-model_path = MODEL_DIR + "MTRNN/model/cs70/20200913_165013_33500.pth"
+model_path = MODEL_DIR + "MTRNN/model/default/20200925_095956_14500.pth"
 checkpoint = torch.load(model_path)
 net.load_state_dict(checkpoint["model"])
 
@@ -51,11 +52,11 @@ outputs = []
 io_states = []
 cf_states = []
 cs_states = []
-hz = 10
+hz = 20
 rate = rospy.Rate(hz * high_freq)
 end_step = 30*hz * high_freq
 motion_count = 0
-start_frame = +10#10 * high_freq
+start_frame = +5  # 10 * high_freq
 
 while not rospy.is_shutdown() and motion_count < end_step:
     motion_count += 1
@@ -88,15 +89,14 @@ while not rospy.is_shutdown() and motion_count < end_step:
     rate.sleep()
 
 dataset.save_inputs()
-    # np_output = outputs.view(-1, dataset[0][0].shape[1]).detach().numpy()
-    # cs_pca = PCA(n_components=2).fit_transform(cs_states)
-    # cf_pca = PCA(n_components=2).fit_transform(cf_states)
-    # header = (
-    #     get_header("in ")
-    #     + get_header("out ")
-    #     + ["cf_pca{}".format(i) for i in range(cf_pca.shape[1])]
-    #     + ["cs_pca{}".format(i) for i in range(cs_pca.shape[1])]
-    # )
-    # df_output = pd.DataFrame(data=connected_data, columns=header)
-    # df_output.to_excel(RESULT_DIR + "output{:02}.xlsx".format(j + 1), index=False)
-
+# np_output = outputs.view(-1, dataset[0][0].shape[1]).detach().numpy()
+# cs_pca = PCA(n_components=2).fit_transform(cs_states)
+# cf_pca = PCA(n_components=2).fit_transform(cf_states)
+# header = (
+#     get_header("in ")
+#     + get_header("out ")
+#     + ["cf_pca{}".format(i) for i in range(cf_pca.shape[1])]
+#     + ["cs_pca{}".format(i) for i in range(cs_pca.shape[1])]
+# )
+# df_output = pd.DataFrame(data=connected_data, columns=header)
+# df_output.to_excel(RESULT_DIR + "output{:02}.xlsx".format(j + 1), index=False)

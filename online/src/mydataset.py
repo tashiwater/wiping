@@ -13,6 +13,8 @@ import pandas as pd
 import cv2
 import PIL
 import datetime
+from crop import random_crop_image
+
 
 class OnlineDataSet:
     def __init__(self, cae, device, high_freq):
@@ -53,11 +55,13 @@ class OnlineDataSet:
             [-5, 5],
             [-5, 5],
         ]
-        self._last_tactile  = None
+        self._last_tactile = None
         self._last_img = None
         self._connected_data = None
         self._connected_datas = []
         self._decoded_datas = []
+        self.dsize = 5
+        self._img_size = (128, 96)
 
     def cal_high_freq(self):
         if self._last_tactile is None:
@@ -75,11 +79,11 @@ class OnlineDataSet:
         # log
         self._imgs.append(self._last_img)
         # extract feature
-        position = self._get_mean(self._positions[-self._high_freq :])
-        effort = self._get_mean(self._efforts[-self._high_freq :])
-        tactile = self._get_mean(self._tactiles[-self._high_freq :])
+        position = self._get_mean(self._positions[-self._high_freq:])
+        effort = self._get_mean(self._efforts[-self._high_freq:])
+        tactile = self._get_mean(self._tactiles[-self._high_freq:])
         img_feature = self.get_img_feature(self._imgs[-1])
-        
+
         tactile_before_scale = [[0, 1] for _ in tactile]
         img_before_scale = [[0, 1] for _ in img_feature]
 
@@ -89,11 +93,10 @@ class OnlineDataSet:
         img_feature = self.normalize(img_feature, img_before_scale)
         # print(position.shape,effort.shape,tactile.shape,img_feature.shape )
         connected_data = np.hstack(
-            [position, effort, tactile,img_feature]
+            [position, effort, tactile, img_feature]
         )
         self._connected_data = torch.tensor(connected_data).float()
         self._connected_datas.append(connected_data)
-
 
     def get_connected_data(self):
         return self._connected_data
@@ -101,7 +104,9 @@ class OnlineDataSet:
     def cb_image(self, data):
         img = self._bridge.imgmsg_to_cv2(data, "rgb8")
         img = PIL.Image.fromarray(img)
-        img = img.resize((128, 96))
+        img = img.resize(
+            (self._img_size[0]+self.dsize, self._img_size[1]+self.dsize))
+        img = random_crop_image(img, self._img_size, test=True)
         self._last_img = img
 
     def TouchSensorCallback(self, data):
@@ -113,12 +118,12 @@ class OnlineDataSet:
 
     def get_img_feature(self, img):
         img_tensor = torchvision.transforms.ToTensor()(img)
-        img_tensor = torch.unsqueeze(img_tensor,0)
+        img_tensor = torch.unsqueeze(img_tensor, 0)
         # img_tensor = img_tensor.to(self._device)
         img_feature, box_class = self._cae.encoder(img_tensor)
 
         val, class_num = torch.max(box_class, 1)
-        print(val,class_num)
+        print(val, class_num)
         # img_feature = torch.zeros(size = (1,20))
         img = self._cae.decoder(img_feature)
         rgb = torchvision.transforms.functional.to_pil_image(img[0], "RGB")
@@ -129,33 +134,33 @@ class OnlineDataSet:
         data = (data - indataRange[0]) / (indataRange[1] - indataRange[0])
         data = data * (outdataRange[1] - outdataRange[0]) + outdataRange[0]
         return data
-    def normalize(self, data, before_scale, after_scale = [-0.9,0.9]):
-        if np.array(before_scale).ndim ==1:
+
+    def normalize(self, data, before_scale, after_scale=[-0.9, 0.9]):
+        if np.array(before_scale).ndim == 1:
             before_scales = [before_scale for _ in data]
         else:
             before_scales = before_scale
-        if np.array(after_scale).ndim ==1:
+        if np.array(after_scale).ndim == 1:
             after_scales = [after_scale for _ in data]
         else:
             after_scales = after_scale
-        ret =[]
+        ret = []
         for d, before, after in zip(data, before_scales, after_scales):
             ret.append(self._each_normalization(d, before, after))
         return ret
 
-    def get_header(self, add_word = ""):
+    def get_header(self, add_word=""):
         return (
             [add_word + "position{}".format(i) for i in range(7)]
             + [add_word + "torque{}".format(i) for i in range(7)]
             + [add_word + "tactile{}".format(i) for i in range(16)]
             + [add_word + "image{}".format(i) for i in range(20)]
         )
-    
+
     def reverse_position(self, position):
         return self.normalize(position, [-1, 1], self._position_before_scale)
-    
-    # def save_last_log(self):
 
+    # def save_last_log(self):
 
     def save_inputs(self):
         data_dir = "/home/assimilation/TAKUMI_SHIMIZU/wiping_ws/src/wiping/online/data/"
@@ -170,6 +175,5 @@ class OnlineDataSet:
 
         for i, img in enumerate(self._imgs):
             img.save(log_dir + "input_img/{:03d}.jpg".format(i))
-            self._decoded_datas[i].save(log_dir + "decoded/{:03d}.jpg".format(i))
-            
-
+            self._decoded_datas[i].save(
+                log_dir + "decoded/{:03d}.jpg".format(i))

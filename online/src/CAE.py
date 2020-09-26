@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # coding: utf-8
 import torch
+# from torchsummary import summary
 
 
 class ToImg(torch.nn.Module):
@@ -9,54 +10,67 @@ class ToImg(torch.nn.Module):
         return x.reshape(n, 256, 6, 8)
 
 
-class Nothing(torch.nn.Module):
-    def __init__(self, num):
-        super().__init__()
-        self._str = str(num)
+# This is bad name because it use for not only CNN but also FullConnect.
+# This class makes this code not to read easily, but this helps to write model.
+# Therefore, I use this.
+class CNNCell(torch.nn.Module):
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        kernel_size=4,
+        stride=2,
+        padding=1,
+        activate="relu",
+        mode="conv",
+    ):
+        super(CNNCell, self).__init__()
+        if mode == "conv":
+            self.nn = torch.nn.Conv2d(
+                in_channels, out_channels, kernel_size, stride, padding
+            )
+            self.batchnorm = torch.nn.BatchNorm2d(out_channels)
+        elif mode == "linear":
+            self.nn = torch.nn.Linear(in_channels, out_channels)
+            self.batchnorm = torch.nn.BatchNorm1d(out_channels)
+        elif mode == "conv_trans":
+            self.nn = torch.nn.ConvTranspose2d(
+                in_channels, out_channels, kernel_size, stride, padding
+            )
+            self.batchnorm = torch.nn.BatchNorm2d(out_channels)
+
+        if activate == "relu":
+            self.activate = torch.nn.ReLU()
+        elif activate == "sigmoid":
+            self.activate = torch.nn.Sigmoid()
 
     def forward(self, x):
-        print(self._str)
+        x = self.nn(x)
+        x = self.batchnorm(x)
+        x = self.activate(x)
         return x
 
 
-class CAEwithAttention(torch.nn.Module):
+class CAE(torch.nn.Module):
     def __init__(self):
-        super(CAEwithAttention, self).__init__()
+        super(CAE, self).__init__()
         hidden_dim = 20
         class_num = 6
-        self.activate = torch.nn.ReLU(True)
         self.feature_extract = torch.nn.Sequential(
             # 128*96*3
-            torch.nn.Conv2d(3, 32, 4, stride=2, padding=1),  # ->64*48*32
-            torch.nn.BatchNorm2d(32),
-            self.activate,
-            torch.nn.Conv2d(32, 64, 4, stride=2, padding=1),  # ->32*24*64
-            torch.nn.BatchNorm2d(64),
-            self.activate,
-            torch.nn.Conv2d(64, 128, 4, stride=2, padding=1),  # ->16*12*128
-            torch.nn.BatchNorm2d(128),
-            self.activate,
-            torch.nn.Conv2d(128, 256, 4, stride=2, padding=1),  # ->8*6*256
-            torch.nn.BatchNorm2d(256),
-            self.activate,
+            CNNCell(3, 32),
+            CNNCell(32, 64),
+            CNNCell(64, 128),
+            CNNCell(128, 256),
         )
         self.attention_extract = torch.nn.Sequential(
-            torch.nn.Conv2d(256, 512, 3, stride=1, padding=1),  # ->8*6*512
-            torch.nn.BatchNorm2d(512),
-            self.activate,
-            torch.nn.Conv2d(512, 512, 3, stride=1, padding=1),  # ->8*6*512
-            torch.nn.BatchNorm2d(512),
-            self.activate,
-            torch.nn.Conv2d(512, class_num, 1, stride=1, padding=0),  # ->8*6*class_num
-            torch.nn.BatchNorm2d(class_num),
-            self.activate,
+            CNNCell(256, 512, 3, 1, 1),
+            CNNCell(512, 512, 3, 1, 1),
+            CNNCell(512, class_num, 1, 1, 0),
         )
-        self.get_attention_map = torch.nn.Sequential(
-            torch.nn.Conv2d(class_num, 1, 1, stride=1, padding=0),  # ->8*6*1
-            torch.nn.BatchNorm2d(1),
-            torch.nn.Sigmoid(),
-        )
+        self.get_attention_map = CNNCell(class_num, 1, 1, 1, 0, "sigmoid")
         self.get_class = torch.nn.Sequential(
+            # torch.nn.Dropout2d(p=0.3),
             torch.nn.Conv2d(
                 class_num, class_num, 1, stride=1, padding=0
             ),  # ->8*6*class_num
@@ -65,32 +79,19 @@ class CAEwithAttention(torch.nn.Module):
         )
         self.get_hidden = torch.nn.Sequential(
             torch.nn.Flatten(),
-            torch.nn.Linear(8 * 6 * 256, 254),
-            torch.nn.BatchNorm1d(254),
-            self.activate,
-            torch.nn.Linear(254, hidden_dim),
-            torch.nn.BatchNorm1d(hidden_dim),
-            torch.nn.Sigmoid(),
+            CNNCell(8 * 6 * 256, 254, mode="linear"),
+            CNNCell(254, hidden_dim, activate="sigmoid", mode="linear"),
         )
         self.decoder = torch.nn.Sequential(
-            torch.nn.Linear(hidden_dim, 254),
-            torch.nn.BatchNorm1d(254),
-            self.activate,
-            torch.nn.Linear(254, 8 * 6 * 256),
-            torch.nn.BatchNorm1d(8 * 6 * 256),
-            self.activate,
+            CNNCell(hidden_dim, 254, mode="linear"),
+            CNNCell(254, 8 * 6 * 256, mode="linear"),
             ToImg(),
-            torch.nn.ConvTranspose2d(256, 128, 4, stride=2, padding=1),
-            torch.nn.BatchNorm2d(128),
-            self.activate,
-            torch.nn.ConvTranspose2d(128, 64, 4, stride=2, padding=1),
-            torch.nn.BatchNorm2d(64),
-            self.activate,
-            torch.nn.ConvTranspose2d(64, 32, 4, stride=2, padding=1),
-            torch.nn.BatchNorm2d(32),
-            self.activate,
+            CNNCell(256, 128, mode="conv_trans"),
+            CNNCell(128, 64, mode="conv_trans"),
+            CNNCell(64, 32, mode="conv_trans"),
+            # torch.nn.Dropout2d(p=0.3),
             torch.nn.ConvTranspose2d(32, 3, 4, stride=2, padding=1),
-            self.activate,
+            torch.nn.ReLU(),
         )
 
     def encoder(self, x):
@@ -105,130 +106,11 @@ class CAEwithAttention(torch.nn.Module):
     def forward(self, x):
         hidden, box_class = self.encoder(x)
         x = self.decoder(hidden)
-        return [x, box_class]
-
-
-class CAE(torch.nn.Module):
-    def __init__(self):
-        super(CAE, self).__init__()
-        hidden_dim = 20
-        self.activate = torch.nn.ReLU(True)
-        self.encoder = torch.nn.Sequential(
-            # 128*96*3
-            torch.nn.Conv2d(3, 32, 4, stride=2, padding=1),  # ->64*48*32
-            torch.nn.BatchNorm2d(32),
-            self.activate,
-            torch.nn.Conv2d(32, 64, 4, stride=2, padding=1),  # ->32*24*64
-            torch.nn.BatchNorm2d(64),
-            self.activate,
-            torch.nn.Conv2d(64, 128, 4, stride=2, padding=1),  # ->16*12*128
-            torch.nn.BatchNorm2d(128),
-            self.activate,
-            torch.nn.Conv2d(128, 256, 4, stride=2, padding=1),  # ->8*6*256
-            torch.nn.BatchNorm2d(256),
-            self.activate,
-            torch.nn.Flatten(),
-            torch.nn.Linear(8 * 6 * 256, 254),
-            torch.nn.BatchNorm1d(254),
-            self.activate,
-            torch.nn.Linear(254, hidden_dim),
-            torch.nn.BatchNorm1d(hidden_dim),
-            torch.nn.Sigmoid(),
-        )
-        self.decoder = torch.nn.Sequential(
-            torch.nn.Linear(hidden_dim, 254),
-            torch.nn.BatchNorm1d(254),
-            self.activate,
-            torch.nn.Linear(254, 8 * 6 * 256),
-            torch.nn.BatchNorm1d(8 * 6 * 256),
-            self.activate,
-            ToImg(),
-            torch.nn.ConvTranspose2d(256, 128, 4, stride=2, padding=1),
-            torch.nn.BatchNorm2d(128),
-            self.activate,
-            torch.nn.ConvTranspose2d(128, 64, 4, stride=2, padding=1),
-            torch.nn.BatchNorm2d(64),
-            self.activate,
-            torch.nn.ConvTranspose2d(64, 32, 4, stride=2, padding=1),
-            torch.nn.BatchNorm2d(32),
-            self.activate,
-            torch.nn.ConvTranspose2d(32, 3, 4, stride=2, padding=1),
-            self.activate,
-        )
-
-    def forward(self, x):
-        image = x
-        image2 = self.encoder(image)
-        x = self.decoder(image2)
-
-        return x
+        return x, box_class
 
 
 if __name__ == "__main__":
-    net = Net()
-    print(net)
-
-
-class Net(torch.nn.Module):
-    def __init__(self):
-        super(Net, self).__init__()
-        hidden_dim = 20
-        self.encoder = torch.nn.Sequential(
-            # 128*96*3
-            # Nothing(1),
-            torch.nn.Conv2d(3, 32, 4, stride=2, padding=1),  # ->64*48*32
-            torch.nn.BatchNorm2d(32),
-            torch.nn.ReLU(),
-            torch.nn.Conv2d(32, 64, 4, stride=2, padding=1),  # ->32*24*64
-            torch.nn.BatchNorm2d(64),
-            torch.nn.ReLU(),
-            torch.nn.Conv2d(64, 128, 4, stride=2, padding=1),  # ->16*12*128
-            torch.nn.BatchNorm2d(128),
-            torch.nn.ReLU(),
-            torch.nn.Conv2d(128, 256, 4, stride=2, padding=1),  # ->8*6*256
-            torch.nn.BatchNorm2d(256),
-            torch.nn.ReLU(),
-            torch.nn.Flatten(),
-            # Nothing(2),
-            torch.nn.Linear(8 * 6 * 256, 254),
-            torch.nn.BatchNorm1d(254),
-            torch.nn.ReLU(),
-            # Nothing(3),
-            torch.nn.Linear(254, hidden_dim),
-            # Nothing(4),
-            torch.nn.BatchNorm1d(hidden_dim),
-            # Nothing(5),
-            torch.nn.Sigmoid(),
-        )
-        self.decoder = torch.nn.Sequential(
-            torch.nn.Linear(hidden_dim, 254),
-            torch.nn.BatchNorm1d(254),
-            torch.nn.ReLU(),
-            torch.nn.Linear(254, 8 * 6 * 256),
-            torch.nn.BatchNorm1d(8 * 6 * 256),
-            torch.nn.ReLU(),
-            ToImg(),
-            torch.nn.ConvTranspose2d(256, 128, 4, stride=2, padding=1),
-            torch.nn.BatchNorm2d(128),
-            torch.nn.ReLU(),
-            torch.nn.ConvTranspose2d(128, 64, 4, stride=2, padding=1),
-            torch.nn.BatchNorm2d(64),
-            torch.nn.ReLU(),
-            torch.nn.ConvTranspose2d(64, 32, 4, stride=2, padding=1),
-            torch.nn.BatchNorm2d(32),
-            torch.nn.ReLU(),
-            torch.nn.ConvTranspose2d(32, 3, 4, stride=2, padding=1),
-            torch.nn.ReLU(),
-        )
-
-    def forward(self, x):
-        image = x
-        image2 = self.encoder(image)
-        x = self.decoder(image2)
-
-        return x
-
-
-if __name__ == "__main__":
-    net = Net()
-    print(net)
+    net = CAE()
+    # device = torch.device("cuda:0")
+    # net = net.to(device)
+    summary(net, (3, 96, 128), device="cpu")
