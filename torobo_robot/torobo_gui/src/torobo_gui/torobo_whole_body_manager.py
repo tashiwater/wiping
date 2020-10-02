@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-## -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 import os
 import rospy
 import rosparam
@@ -35,11 +35,13 @@ from torobo_control import get_torobo_joint_state_client
 
 from torobo_common import repeat_get_param
 
-#Take photo, Add by Saito
+# Take photo, Add by Saito
 from sensor_msgs.msg import JointState
 from sensor_msgs.msg import Image
 from std_msgs.msg import Float32MultiArray
 lock = threading.Lock()
+
+
 class ImageBuffer(object):
     def __init__(self):
         self._image = None
@@ -61,15 +63,16 @@ class ImageBuffer(object):
             self._image = None
             return img
 
+
 class ToroboWholeBodyManager(Plugin):
     def __init__(self, context):
         super(self.__class__, self).__init__(context)
         self.setObjectName('ToroboWholeBodyManager')
         self._touch = None
-        
-        #Add by Saito
-        self.touch_file=None
-        self.touch_writer=None
+
+        # Add by Saito
+        self.touch_file = None
+        self.touch_writer = None
 
         # Process standalone plugin command-line arguments
         from argparse import ArgumentParser
@@ -87,38 +90,41 @@ class ToroboWholeBodyManager(Plugin):
         self._widget = QWidget()
 
         # load ui
-        ui_file = os.path.join(rospkg.RosPack().get_path('torobo_gui'), 'resource', 'torobo_whole_body_manager.ui')
+        ui_file = os.path.join(rospkg.RosPack().get_path(
+            'torobo_gui'), 'resource', 'torobo_whole_body_manager.ui')
         loadUi(ui_file, self._widget)
         self._widget.setObjectName('ToroboWholeBodyManagerUi')
 
-        # plugin at once, these lines add number to make it easy to 
+        # plugin at once, these lines add number to make it easy to
         # tell from pane to pane.
         if context.serial_number() > 1:
-            self._widget.setWindowTitle(self._widget.windowTitle() + (' (%d)' % context.serial_number()))
+            self._widget.setWindowTitle(
+                self._widget.windowTitle() + (' (%d)' % context.serial_number()))
         # Add widget to the user interface
         context.add_widget(self._widget)
         self.serial_number = context.serial_number()
         ns = rospy.get_namespace()
         self.create(ns, 200)
 
-	#Add by Saito
+        # Add by Saito
         rospy.Subscriber("/image_raw", Image, self.cb_image)
-        rospy.Subscriber("/touchence/sensor_data",Float32MultiArray,self.TouchSensorCallback)
-        self.steps=0
-        self.bridge=CvBridge()
+        rospy.Subscriber("/touchence/sensor_data",
+                         Float32MultiArray, self.TouchSensorCallback)
+        self.steps = 0
+        self.bridge = CvBridge()
         self._imageBuffer = ImageBuffer()
-        self.interval_para=1  #change here! 
-        #If you want to do direct teaching and replay it, the parameter shoud be 1.
-        #If you want to collect data, it should be 4 (then, the interval of data driven changes to 1/4 of you command in the GUI).
-        
-        #Add by Shimizu
+        self.interval_para = 1  # change here!
+        # If you want to do direct teaching and replay it, the parameter shoud be 1.
+        # If you want to collect data, it should be 4 (then, the interval of data driven changes to 1/4 of you command in the GUI).
+
+        # Add by Shimizu
         self._data_dir = "/home/assimilation/TAKUMI_SHIMIZU/wiping_ws/src/wiping/data/"
-        OUTPUT_DIR = self._data_dir +"output/"
+        OUTPUT_DIR = self._data_dir + "output/"
         self._img_dir = OUTPUT_DIR + "image_raw/"
         self._tactile_dir = OUTPUT_DIR + "tactile_raw/"
         self._motion_dir = OUTPUT_DIR + "motion_yaml/"
         self._direct_dir = OUTPUT_DIR + "direct/"
-        files_in_path=os.listdir(self._img_dir)
+        files_in_path = os.listdir(self._img_dir)
         self._file_num = len(files_in_path)
         self.clean_sensors()
 
@@ -149,9 +155,10 @@ class ToroboWholeBodyManager(Plugin):
         """
         self._bar_update_count = 0
         self._bar_state = [None for i in range(4)]
-        self._touchbar_list = [self._widget.tactileBar1, self._widget.tactileBar2, self._widget.tactileBar3, self._widget.tactileBar4]
+        self._touchbar_list = [self._widget.tactileBar1, self._widget.tactileBar2,
+                               self._widget.tactileBar3, self._widget.tactileBar4]
         # rospy.loginfo("file num : ", self._file_num)
-        rospy.loginfo("file num : {}".format( self._file_num))
+        rospy.loginfo("file num : {}".format(self._file_num))
         self._on_tactile = False
 
     def initMainForm(self):
@@ -169,21 +176,23 @@ class ToroboWholeBodyManager(Plugin):
         self._widget.buttonSaveRosParam.clicked.connect(self.button_clicked)
         self._widget.buttonLoadRosParam.clicked.connect(self.button_clicked)
 
-        #Add by shimizu
+        # Add by shimizu
         self._widget.buttonTeach.clicked.connect(self.button_clicked)
         self._widget.buttonReplay.clicked.connect(self.button_clicked)
         self._widget.buttonGoStart.clicked.connect(self.button_clicked)
         self._widget.replayCancel.clicked.connect(self.button_clicked)
         self._widget.tactileOnOff.stateChanged.connect(self.tactileOnOff_cb)
-    #shuffled by Shimizu
+    # shuffled by Shimizu
+
     def button_clicked(self):
         sender = self.sender()
         tpNum = int(self._widget.spinBoxTpNumber.text())
         tpName = "tp" + str(tpNum)
         trajName = unicode(self._widget.lineEditTrajName.text())
         transitionTime = float(self._widget.doubleSpinBoxTransitionTime.text())
-        origin_recordInterval = float(self._widget.doubleSpinBoxRecordInterval.text())
-        recordInterval = origin_recordInterval / self.interval_para # SAITO 
+        origin_recordInterval = float(
+            self._widget.doubleSpinBoxRecordInterval.text())
+        recordInterval = origin_recordInterval / self.interval_para  # SAITO
 
         def CallClassServiceAllController(classDict, sleepTime=0.0):
             for (name, c) in classDict.items():
@@ -201,9 +210,11 @@ class ToroboWholeBodyManager(Plugin):
         elif sender == self._widget.buttonAllErrorReset:
             CallClassServiceAllController(self.errorResetClient)
         elif sender == self._widget.buttonTeachingMode:
-            CallClassServiceWithArgAllController(self.setControlModeClient, "external_force_following")
+            CallClassServiceWithArgAllController(
+                self.setControlModeClient, "external_force_following")
         elif sender == self._widget.buttonMovingMode:
-            CallClassServiceWithArgAllController(self.setControlModeClient, "position")
+            CallClassServiceWithArgAllController(
+                self.setControlModeClient, "position")
         elif sender == self._widget.buttonGetTp:
             self.RecordTp(tpName)
             self._widget.spinBoxTpNumber.setValue(tpNum+1)
@@ -226,19 +237,19 @@ class ToroboWholeBodyManager(Plugin):
         elif sender == self._widget.buttonTrajRun:
             self.MoveTeachingTrajectory(trajName)
             self._widget.buttonTrajRecord.setText("Record\nStop")
-            self.StartTrajectoryRecord_for_retry(recordInterval) #Add by Saito
+            self.StartTrajectoryRecord_for_retry(
+                recordInterval)  # Add by Saito
         elif sender == self._widget.buttonSaveRosParam:
             self.SaveRosParam()
         elif sender == self._widget.buttonLoadRosParam:
             self.LoadRosParam()
 
-
-        #Add by Shimizu
+        # Add by Shimizu
         elif sender == self._widget.buttonGoStart:
             # self.
             STARTPOSI_TP = "tp" + str(99)
             if self._widget.buttonGoStart.text() == "decide start posi":
-                #[TODO] I want to delete this. If I can extract the last position of start posi, 
+                # [TODO] I want to delete this. If I can extract the last position of start posi,
                 # then I can delete this process.
                 self.RecordTp(STARTPOSI_TP)
                 self._widget.buttonGoStart.setText("go start posi")
@@ -246,29 +257,28 @@ class ToroboWholeBodyManager(Plugin):
                 self._widget.buttonMovingMode.click()
                 self.MoveTeachingPoint(STARTPOSI_TP, transitionTime)
 
-
-                
-        elif sender ==self._widget.buttonTeach:
+        elif sender == self._widget.buttonTeach:
             if self._widget.buttonTeach.text() == "teach start":
                 self._widget.buttonTeachingMode.click()
                 self.restart_record(origin_recordInterval)
-                self._widget.buttonTeach.setText("go start posi")
-            elif self._widget.buttonTeach.text() == "go start posi":
-                self._widget.buttonGoStart.click()
+            #     self._widget.buttonTeach.setText("go start posi")
+            # elif self._widget.buttonTeach.text() == "go start posi":
+            #     self._widget.buttonGoStart.click()
                 self._widget.buttonTeach.setText("teach stop")
             else:
                 self._widget.buttonTeach.setText("teach start")
                 self.recordTimer.stop()
                 self.RecordTrajectory(trajName)
                 file_name = "{:03d}".format(self._file_num)
-                self.save_rosparam2file(self._direct_dir +file_name + ".yaml")
+                self.save_rosparam2file(self._direct_dir + file_name + ".yaml")
 
         elif sender == self._widget.buttonReplay:
             if self._widget.buttonReplay.text() == "replay":
                 self._widget.buttonMovingMode.click()
                 self.clean_sensors()
                 self.interval_para = 4
-                self.StartTrajectoryRecord(origin_recordInterval / self.interval_para)
+                self.StartTrajectoryRecord(
+                    origin_recordInterval / self.interval_para)
                 self.MoveTeachingTrajectory(trajName)
                 self._widget.buttonReplay.setText("save")
             else:
@@ -278,17 +288,17 @@ class ToroboWholeBodyManager(Plugin):
                 self.save_sensors()
                 self.interval_para = 1
         elif sender == self._widget.replayCancel:
-                self.StopTrajectoryRecord()
-                self.RecordTrajectory(trajName)
-                self.interval_para = 1
-                self._widget.buttonReplay.setText("replay")
+            self.StopTrajectoryRecord()
+            self.RecordTrajectory(trajName)
+            self.interval_para = 1
+            self._widget.buttonReplay.setText("replay")
 
-    #Add by Shimizu
+    # Add by Shimizu
     def save_sensors(self):
         file_name = "{:03d}".format(self._file_num)
         self.save_rosparam2file(self._motion_dir + file_name + ".yaml")
         with open(self._tactile_dir + file_name + ".csv", "w") as f:
-            touch_writer=csv.writer(f,lineterminator='\n')
+            touch_writer = csv.writer(f, lineterminator='\n')
             touch_writer.writerows(self._tactile_buffer)
         img_dir_path = self._img_dir + file_name
         os.mkdir(img_dir_path)
@@ -296,40 +306,40 @@ class ToroboWholeBodyManager(Plugin):
             cv2.imwrite(img_dir_path + "/{:03d}.jpg".format(i), cv_img)
         self._file_num += 1
 
-    #Add by Shimizu
+    # Add by Shimizu
     def clean_sensors(self):
         self._tactile_buffer = []
         self._img_buffer = []
 
-    #Add by Saito
+    # Add by Saito
     def cb_image(self, image):
         try:
-            self._imageBuffer.push_image(self.bridge.imgmsg_to_cv2(image, "bgr8"))           
+            self._imageBuffer.push_image(
+                self.bridge.imgmsg_to_cv2(image, "bgr8"))
         except:
             traceback.print_exc()
-    
-    #Add by Shimizu
+
+    # Add by Shimizu
     def TouchSensorCallback(self, data):
-        self._touch=data.data
-        if self._on_tactile:
-            self._bar_update_count+=1
-            if self._bar_update_count >=8 :
-                self._bar_update_count = 0
-                for i in  range(len(self._touchbar_list)):  #enumerate(self._touchbar_list):
-                    targetbar  = self._touchbar_list[i]
-                    max_data = max(data.data[i*4 : i*4 + 4])*100
-                    targetbar.setValue(max_data)
-                    old_state = self._bar_state[i]
-                    if max_data > 25 :
-                        state = "high"
-                        if old_state != state:
-                            targetbar.setStyleSheet( self._high_tactilebar)
-                    else:
-                        state = "default"
-                        if old_state != state:
-                            targetbar.setStyleSheet(self._default_tactilebar)
-                    self._bar_state[i] = state
-            
+        self._touch = data.data
+        # if self._on_tactile:
+        #     self._bar_update_count+=1
+        #     if self._bar_update_count >=8 :
+        #         self._bar_update_count = 0
+        #         for i in  range(len(self._touchbar_list)):  #enumerate(self._touchbar_list):
+        #             targetbar  = self._touchbar_list[i]
+        #             max_data = max(data.data[i*4 : i*4 + 4])*100
+        #             targetbar.setValue(max_data)
+        #             old_state = self._bar_state[i]
+        #             if max_data > 25 :
+        #                 state = "high"
+        #                 if old_state != state:
+        #                     targetbar.setStyleSheet( self._high_tactilebar)
+        #             else:
+        #                 state = "default"
+        #                 if old_state != state:
+        #                     targetbar.setStyleSheet(self._default_tactilebar)
+        #             self._bar_state[i] = state
 
     def shutdown_plugin(self):
         self.destroy()
@@ -343,7 +353,7 @@ class ToroboWholeBodyManager(Plugin):
         # TODO restore intrinsic configuration, usually using:
         # v = instance_settings.value(k)
         pass
-    
+
     def create(self, nameSpace, updateTimeInterval):
         if (nameSpace == "/"):
             nameSpace = "torobo/"
@@ -352,7 +362,8 @@ class ToroboWholeBodyManager(Plugin):
         self.nameSpace = nameSpace
         self.controllerListNameSpace = "/move_group/controller_list"
 
-        self.controllerDict = self.GetControllerDict(nameSpace + self.controllerListNameSpace)
+        self.controllerDict = self.GetControllerDict(
+            nameSpace + self.controllerListNameSpace)
         self.toroboJointStateJointNames = {}
         self.goHomeActionServerConnection = False
         self.moveTeachingPointActionServerConnection = False
@@ -378,7 +389,8 @@ class ToroboWholeBodyManager(Plugin):
         dic = {}
         controllerNames = self.GetControllerNames(controllerListNameSpace)
         for name in controllerNames:
-            jointNameIdDict = self.GetJointNameIdDict(controllerListNameSpace, name)
+            jointNameIdDict = self.GetJointNameIdDict(
+                controllerListNameSpace, name)
             dic[name] = jointNameIdDict
         return dic
 
@@ -414,18 +426,21 @@ class ToroboWholeBodyManager(Plugin):
         self.errorResetClient = {}
         self.setControlModeClient = {}
         for(k, v) in controllerDict.items():
-            self.servoOffClient[k] = servo_off_client.ServoOffClient(self.nameSpace + k)
-            self.servoOnClient[k] = servo_on_client.ServoOnClient(self.nameSpace + k)
-            self.errorResetClient[k] = error_reset_client.ErrorResetClient(self.nameSpace + k)
-            self.setControlModeClient[k] = set_control_mode_client.SetControlModeClient(self.nameSpace + k)
-    
+            self.servoOffClient[k] = servo_off_client.ServoOffClient(
+                self.nameSpace + k)
+            self.servoOnClient[k] = servo_on_client.ServoOnClient(
+                self.nameSpace + k)
+            self.errorResetClient[k] = error_reset_client.ErrorResetClient(
+                self.nameSpace + k)
+            self.setControlModeClient[k] = set_control_mode_client.SetControlModeClient(
+                self.nameSpace + k)
+
     # Add by Shimizu
     def tactileOnOff_cb(self, state):
         if state == QtCore.Qt.Checked:
             self._on_tactile = True
         else:
             self._on_tactile = False
-
 
     def update(self):
         for(k, jointNames) in self.controllerDict.items():
@@ -447,7 +462,7 @@ class ToroboWholeBodyManager(Plugin):
                     servoState = "Run"
                     servoStateColor = QColor(Qt.blue)
             if servoState == "Error":
-                for i,j in enumerate(errorJoint):
+                for i, j in enumerate(errorJoint):
                     if i == 0:
                         servoState += " "
                     else:
@@ -466,38 +481,40 @@ class ToroboWholeBodyManager(Plugin):
                 self._widget.labelLArmMode.setText(mode)
                 self._widget.labelLArmServoState.setText(servoState)
                 pal = self._widget.labelLArmServoState.palette()
-                pal.setColor(QPalette.Foreground,servoStateColor)
+                pal.setColor(QPalette.Foreground, servoStateColor)
                 self._widget.labelLArmServoState.setPalette(pal)
                 pal = self._widget.labelLArmMode.palette()
-                pal.setColor(QPalette.Foreground,modeColor)
+                pal.setColor(QPalette.Foreground, modeColor)
                 self._widget.labelLArmMode.setPalette(pal)
             elif "right_arm" in k:
                 self._widget.labelRArmMode.setText(mode)
                 self._widget.labelRArmServoState.setText(servoState)
                 pal = self._widget.labelRArmServoState.palette()
-                pal.setColor(QPalette.Foreground,servoStateColor)
+                pal.setColor(QPalette.Foreground, servoStateColor)
                 self._widget.labelRAReplayrmServoState.setPalette(pal)
                 pal = self._widget.labelRArmMode.palette()
-                pal.setColor(QPalette.Foreground,modeColor)
+                pal.setColor(QPalette.Foreground, modeColor)
                 self._widget.labelRArmMode.setPalette(pal)
             elif "torso_head" in k:
                 self._widget.labelTorsoHeadMode.setText(mode)
                 self._widget.labelTorsoHeadServoState.setText(servoState)
                 pal = self._widget.labelTorsoHeadServoState.palette()
-                pal.setColor(QPalette.Foreground,servoStateColor)
+                pal.setColor(QPalette.Foreground, servoStateColor)
                 self._widget.labelTorsoHeadServoState.setPalette(pal)
                 pal = self._widget.labelTorsoHeadMode.palette()
-                pal.setColor(QPalette.Foreground,modeColor)
+                pal.setColor(QPalette.Foreground, modeColor)
                 self._widget.labelTorsoHeadMode.setPalette(pal)
 
-    def RecordTp(self,tpName):  
+    def RecordTp(self, tpName):
         for (name, dic) in self.controllerDict.items():
             if ("gripper" in name):
                 continue
             point = self.GetJointTrajectoryPoint(name)
             if point is None:
                 continue
-            teaching_point_manager.RecordTeachingPointToRosParam(self.nameSpace + name, tpName, point)
+            teaching_point_manager.RecordTeachingPointToRosParam(
+                self.nameSpace + name, tpName, point)
+
     def GoHome(self, transitionTime):
         if(self.goHomeActionServerConnection == False):
             # pre-connect to action server for avoiding delay
@@ -505,7 +522,8 @@ class ToroboWholeBodyManager(Plugin):
             for (name, dic) in self.controllerDict.items():
                 if ("gripper" in name):
                     continue
-                ret &= move_home_position_client.connect_server(self.nameSpace + name, timeout=1.0)
+                ret &= move_home_position_client.connect_server(
+                    self.nameSpace + name, timeout=1.0)
             if(ret):
                 self.goHomeActionServerConnection = True
 
@@ -513,7 +531,8 @@ class ToroboWholeBodyManager(Plugin):
         for (name, dic) in self.controllerDict.items():
             if ("gripper" in name):
                 continue
-            move_home_position_client.call_action(self.nameSpace + name, transitionTime, timeout=0.5)
+            move_home_position_client.call_action(
+                self.nameSpace + name, transitionTime, timeout=0.5)
 
     def MoveTeachingPoint(self, tpName, transitionTime):
         if(self.moveTeachingPointActionServerConnection == False):
@@ -522,15 +541,17 @@ class ToroboWholeBodyManager(Plugin):
             for (name, dic) in self.controllerDict.items():
                 if ("gripper" in name):
                     continue
-                ret &= teaching_point_manager.connect_server(self.nameSpace + name, timeout=1.0)
+                ret &= teaching_point_manager.connect_server(
+                    self.nameSpace + name, timeout=1.0)
             if(ret):
                 self.moveTeachingPointActionServerConnection = True
         for (name, dic) in self.controllerDict.items():
             if ("gripper" in name):
                 continue
-            teaching_point_manager.MoveToTeachingPoint(self.nameSpace + name, tpName, transitionTime, timeout=0.5)
+            teaching_point_manager.MoveToTeachingPoint(
+                self.nameSpace + name, tpName, transitionTime, timeout=0.5)
 
-    #Add by Saito
+    # Add by Saito
     def MoveTeachingTrajectory(self, trajName):
         if(self.moveTeachingTrajectoryActionServerConnection == False):
             # pre-connect to action server for avoiding delay
@@ -538,18 +559,20 @@ class ToroboWholeBodyManager(Plugin):
             for (name, dic) in self.controllerDict.items():
                 if ("gripper" in name):
                     continue
-                ret &= teaching_trajectory_manager.connect_server(self.nameSpace + name, timeout=1.0)
+                ret &= teaching_trajectory_manager.connect_server(
+                    self.nameSpace + name, timeout=1.0)
             if(ret):
                 self.moveTeachingTrajectoryActionServerConnection = True
         for (name, dic) in self.controllerDict.items():
             if ("gripper" in name):
                 continue
-            teaching_trajectory_manager.MoveToTeachingTrajectory(self.nameSpace + name, trajName, timeout=0.5)
+            teaching_trajectory_manager.MoveToTeachingTrajectory(
+                self.nameSpace + name, trajName, timeout=0.5)
         print "retry"
 
-    #Add by Shimizu
-    def restart_record(self,recordInterval):
-        
+    # Add by Shimizu
+    def restart_record(self, recordInterval):
+
         self.recordPoints = {}
         for (name, dic) in self.controllerDict.items():
             if ("gripper" in name):
@@ -562,27 +585,29 @@ class ToroboWholeBodyManager(Plugin):
     def StartTrajectoryRecord(self, recordInterval, startTimer=True):
         print "Record Start"
         self.restart_record(recordInterval)
-        files_in_path=os.listdir("/home/assimilation/touchsensor/")
-        number_of_files=len(files_in_path)
-        self.touch_file=open("/home/assimilation/touchsensor/"+str(number_of_files+1)+".csv",'w')
-        #Change by Shimizu
+        files_in_path = os.listdir("/home/assimilation/touchsensor/")
+        number_of_files = len(files_in_path)
+        self.touch_file = open(
+            "/home/assimilation/touchsensor/"+str(number_of_files+1)+".csv", 'w')
+        # Change by Shimizu
         # self.touch_writer=csv.writer(self.touch_file,lineterminator='\n')
 
     def StartTrajectoryRecord_for_retry(self, recordInterval, startTimer=True):
         print "Figure Record Start"
         self.restart_record(recordInterval)
-        files_in_path=os.listdir("/home/assimilation/touchsensor/")
-        number_of_files=len(files_in_path)
-        self.touch_file=open("/home/assimilation/touchsensor/"+str(number_of_files+1)+".csv",'w')
-        #Change by Shimizu
+        files_in_path = os.listdir("/home/assimilation/touchsensor/")
+        number_of_files = len(files_in_path)
+        self.touch_file = open(
+            "/home/assimilation/touchsensor/"+str(number_of_files+1)+".csv", 'w')
+        # Change by Shimizu
         # self.touch_writer=csv.writer(self.touch_file,lineterminator='\n')
 
     def StopTrajectoryRecord(self):
         print "Record Stop"
         self.recordTimer.stop()
-        #Add by Saito
+        # Add by Saito
         self.touch_file.close()
-    
+
     def RecordTrajectory(self, trajName):
         for (name, dic) in self.controllerDict.items():
             if ("gripper" in name):
@@ -590,13 +615,16 @@ class ToroboWholeBodyManager(Plugin):
             traj = JointTrajectory()
             traj.joint_names = self.toroboJointStateJointNames[name]
             traj.points = self.recordPoints[name]
-            teaching_trajectory_manager.RecordTeachingTrajectoryToRosParam(self.nameSpace + name, trajName, traj)
+            teaching_trajectory_manager.RecordTeachingTrajectoryToRosParam(
+                self.nameSpace + name, trajName, traj)
 
     def IncrementRecordTime(self):
-        self.recordTime = numpy.round(self.recordIntervalMS * self.recordPointsNum / 1000.0, 2)
-    
+        self.recordTime = numpy.round(
+            self.recordIntervalMS * self.recordPointsNum / 1000.0, 2)
+
     def GetJointTrajectoryPoint(self, controllerName):
-        toroboJointState = get_torobo_joint_state_client.call_service(self.nameSpace, controllerName)
+        toroboJointState = get_torobo_joint_state_client.call_service(
+            self.nameSpace, controllerName)
         if(toroboJointState is None):
             return None
         self.toroboJointStateJointNames[controllerName] = toroboJointState.name
@@ -605,19 +633,20 @@ class ToroboWholeBodyManager(Plugin):
         point.velocities = toroboJointState.velocity
         point.accelerations = toroboJointState.acceleration
         point.effort = toroboJointState.effort
-        #touch sensor Add by Saito
+        # touch sensor Add by Saito
         if self.touch_writer is not None:
             self.touch_writer.writerow(self._touch)
-        #Add by Shimizu
+        # Add by Shimizu
         self._tactile_buffer.append(self._touch)
 
-	#camera Add by Saito
-    	if not self._imageBuffer.is_empty():
-            if self.steps%self.interval_para==0:
+        # camera Add by Saito
+        if not self._imageBuffer.is_empty():
+            if self.steps % self.interval_para == 0:
                 cv_img = self._imageBuffer.pop_image()
                 self._img_buffer.append(cv_img)
-                cv2.imwrite("/home/assimilation/cameratest/test/{:0>4d}".format(self.steps/self.interval_para) + ".jpg", cv_img)
-        self.steps=self.steps+1
+                cv2.imwrite("/home/assimilation/cameratest/test/{:0>4d}".format(
+                    self.steps/self.interval_para) + ".jpg", cv_img)
+        self.steps = self.steps+1
 
         return point
 
@@ -645,8 +674,10 @@ class ToroboWholeBodyManager(Plugin):
                 if ("gripper" in name):
                     continue
                 param[name] = {}
-                tps = rospy.get_param(self.nameSpace + name + "/teaching_points", None)
-                trajs = rospy.get_param(self.nameSpace + name + "/teaching_trajectories", None)
+                tps = rospy.get_param(
+                    self.nameSpace + name + "/teaching_points", None)
+                trajs = rospy.get_param(
+                    self.nameSpace + name + "/teaching_trajectories", None)
                 if (tps != None):
                     param[name]['teaching_points'] = tps
                 if (trajs != None):
@@ -659,7 +690,8 @@ class ToroboWholeBodyManager(Plugin):
             rospy.loginfo("Not saved")
 
     def SaveRosParam(self):
-        loadfile = QFileDialog.getSaveFileName(self._widget, "Save rosparam", self._data_dir, "Yaml (*.yaml)")
+        loadfile = QFileDialog.getSaveFileName(
+            self._widget, "Save rosparam", self._data_dir, "Yaml (*.yaml)")
         fileName = loadfile[0]
         self.save_rosparam2file(fileName)
 
@@ -673,14 +705,16 @@ class ToroboWholeBodyManager(Plugin):
         rospy.loginfo("Loaded rosparam from [%s]" % fileName)
 
     def LoadRosParam(self):
-        loadfile = QFileDialog.getOpenFileName(self._widget, "Please select loading rosparam yaml file", self._data_dir, "Yaml (*.yaml)")
+        loadfile = QFileDialog.getOpenFileName(
+            self._widget, "Please select loading rosparam yaml file", self._data_dir, "Yaml (*.yaml)")
         fileName = loadfile[0]
         self.LoadRosParamFile(fileName)
-        
 
     def OpenSaveFileDialog(self):
-        filename = QFileDialog.getSaveFileName(self._widget, "Save rosparam", "~/torobo_teaching_param.yaml", "Yaml (*.yaml)")
+        filename = QFileDialog.getSaveFileName(
+            self._widget, "Save rosparam", "~/torobo_teaching_param.yaml", "Yaml (*.yaml)")
         return filename
+
 
 class eSystemMode:
     STOP = 0
@@ -688,7 +722,7 @@ class eSystemMode:
     RUN = 2
     ERROR = 3
 
+
 class eHighCtrlMode:
     TRAJ = 0
     EXTERNAL_FORCE_FOLLOWING = 5
-
