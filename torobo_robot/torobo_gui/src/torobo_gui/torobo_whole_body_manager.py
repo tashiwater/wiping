@@ -206,7 +206,8 @@ class ToroboWholeBodyManager(Plugin):
         tpName = "tp" + str(tpNum)
         trajName = unicode(self._widget.lineEditTrajName.text())
         transitionTime = float(self._widget.doubleSpinBoxTransitionTime.text())
-        origin_recordInterval = float(self._widget.doubleSpinBoxRecordInterval.text())
+        origin_recordInterval = float(
+            self._widget.doubleSpinBoxRecordInterval.text())
         recordInterval = origin_recordInterval / self.interval_para  # SAITO
 
         def CallClassServiceAllController(classDict, sleepTime=0.0):
@@ -230,7 +231,8 @@ class ToroboWholeBodyManager(Plugin):
                 self.setControlModeClient, "external_force_following"
             )
         elif sender == self._widget.buttonMovingMode:
-            CallClassServiceWithArgAllController(self.setControlModeClient, "position")
+            CallClassServiceWithArgAllController(
+                self.setControlModeClient, "position")
         elif sender == self._widget.buttonGetTp:
             self.RecordTp(tpName)
             self._widget.spinBoxTpNumber.setValue(tpNum + 1)
@@ -253,7 +255,8 @@ class ToroboWholeBodyManager(Plugin):
         elif sender == self._widget.buttonTrajRun:
             self.MoveTeachingTrajectory(trajName)
             self._widget.buttonTrajRecord.setText("Record\nStop")
-            self.StartTrajectoryRecord_for_retry(recordInterval)  # Add by Saito
+            self.StartTrajectoryRecord_for_retry(
+                recordInterval)  # Add by Saito
         elif sender == self._widget.buttonSaveRosParam:
             self.SaveRosParam()
         elif sender == self._widget.buttonLoadRosParam:
@@ -292,10 +295,11 @@ class ToroboWholeBodyManager(Plugin):
                 self._widget.buttonMovingMode.click()
                 self.clean_sensors()
                 self.interval_para = 4
-                self.StartTrajectoryRecord(origin_recordInterval / self.interval_para)
+                self.StartTrajectoryRecord(
+                    origin_recordInterval / self.interval_para)
                 self.MoveTeachingTrajectory(trajName)
-                self._widget.buttonTeach.setText("go start posi")
-            elif self._widget.buttonTeach.text() == "go start posi":
+                self._widget.buttonReplay.setText("go start posi")
+            elif self._widget.buttonReplay.text() == "go start posi":
                 self._widget.buttonGoStart.click()
                 self._widget.buttonReplay.setText("save")
             else:
@@ -331,7 +335,8 @@ class ToroboWholeBodyManager(Plugin):
     # Add by Saito
     def cb_image(self, image):
         try:
-            self._imageBuffer.push_image(self.bridge.imgmsg_to_cv2(image, "bgr8"))
+            self._imageBuffer.push_image(
+                self.bridge.imgmsg_to_cv2(image, "bgr8"))
         except:
             traceback.print_exc()
 
@@ -406,7 +411,8 @@ class ToroboWholeBodyManager(Plugin):
         dic = {}
         controllerNames = self.GetControllerNames(controllerListNameSpace)
         for name in controllerNames:
-            jointNameIdDict = self.GetJointNameIdDict(controllerListNameSpace, name)
+            jointNameIdDict = self.GetJointNameIdDict(
+                controllerListNameSpace, name)
             dic[name] = jointNameIdDict
         return dic
 
@@ -442,8 +448,10 @@ class ToroboWholeBodyManager(Plugin):
         self.errorResetClient = {}
         self.setControlModeClient = {}
         for (k, v) in controllerDict.items():
-            self.servoOffClient[k] = servo_off_client.ServoOffClient(self.nameSpace + k)
-            self.servoOnClient[k] = servo_on_client.ServoOnClient(self.nameSpace + k)
+            self.servoOffClient[k] = servo_off_client.ServoOffClient(
+                self.nameSpace + k)
+            self.servoOnClient[k] = servo_on_client.ServoOnClient(
+                self.nameSpace + k)
             self.errorResetClient[k] = error_reset_client.ErrorResetClient(
                 self.nameSpace + k
             )
@@ -611,7 +619,8 @@ class ToroboWholeBodyManager(Plugin):
         files_in_path = os.listdir("/home/assimilation/touchsensor/")
         number_of_files = len(files_in_path)
         self.touch_file = open(
-            "/home/assimilation/touchsensor/" + str(number_of_files + 1) + ".csv", "w"
+            "/home/assimilation/touchsensor/" +
+            str(number_of_files + 1) + ".csv", "w"
         )
         # Change by Shimizu
         # self.touch_writer=csv.writer(self.touch_file,lineterminator='\n')
@@ -622,7 +631,8 @@ class ToroboWholeBodyManager(Plugin):
         files_in_path = os.listdir("/home/assimilation/touchsensor/")
         number_of_files = len(files_in_path)
         self.touch_file = open(
-            "/home/assimilation/touchsensor/" + str(number_of_files + 1) + ".csv", "w"
+            "/home/assimilation/touchsensor/" +
+            str(number_of_files + 1) + ".csv", "w"
         )
         # Change by Shimizu
         # self.touch_writer=csv.writer(self.touch_file,lineterminator='\n')
@@ -707,7 +717,8 @@ class ToroboWholeBodyManager(Plugin):
                 if "gripper" in name:
                     continue
                 param[name] = {}
-                tps = rospy.get_param(self.nameSpace + name + "/teaching_points", None)
+                tps = rospy.get_param(
+                    self.nameSpace + name + "/teaching_points", None)
                 trajs = rospy.get_param(
                     self.nameSpace + name + "/teaching_trajectories", None
                 )
