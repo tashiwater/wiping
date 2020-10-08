@@ -13,6 +13,7 @@ import pandas as pd
 import cv2
 import PIL
 import datetime
+import os
 from crop import random_crop_image
 
 
@@ -73,15 +74,15 @@ class OnlineDataSet:
     def _get_mean(self, data):
         return np.array(data).mean(axis=0)
 
-    def cal_features(self):
+    def cal_features(self, high_freq):
         if self._last_img is None:
             return
         # log
         self._imgs.append(self._last_img)
         # extract feature
-        position = self._get_mean(self._positions[-self._high_freq:])
-        effort = self._get_mean(self._efforts[-self._high_freq:])
-        tactile = self._get_mean(self._tactiles[-self._high_freq:])
+        position = self._get_mean(self._positions[-high_freq:])
+        effort = self._get_mean(self._efforts[-high_freq:])
+        tactile = self._get_mean(self._tactiles[-high_freq:])
         img_feature = self.get_img_feature(self._imgs[-1])
 
         tactile_before_scale = [[0, 1] for _ in tactile]
@@ -123,7 +124,6 @@ class OnlineDataSet:
         img_feature, box_class = self._cae.encoder(img_tensor)
 
         val, class_num = torch.max(box_class, 1)
-        print(val, class_num)
         # img_feature = torch.zeros(size = (1,20))
         img = self._cae.decoder(img_feature)
         rgb = torchvision.transforms.functional.to_pil_image(img[0], "RGB")
@@ -153,7 +153,7 @@ class OnlineDataSet:
         return (
             [add_word + "position{}".format(i) for i in range(7)]
             + [add_word + "torque{}".format(i) for i in range(7)]
-            + [add_word + "tactile{}".format(i) for i in range(16)]
+            + [add_word + "tactile{}".format(i) for i in range(12)]
             + [add_word + "image{}".format(i) for i in range(20)]
         )
 
@@ -162,7 +162,7 @@ class OnlineDataSet:
 
     # def save_last_log(self):
 
-    def save_inputs(self):
+    def save_inputs(self, outputs):
         data_dir = "/home/assimilation/TAKUMI_SHIMIZU/wiping_ws/src/wiping/online/data/"
 
         log_dir = data_dir + "log/"
@@ -170,10 +170,20 @@ class OnlineDataSet:
         header = self.get_header()
         df = pd.DataFrame(data=self._connected_datas, columns=header)
         now = datetime.datetime.now()
-        filename = log_dir + "input/" + now.strftime("%Y%m%d_%H%M%S") + ".csv"
+        nowstr = now.strftime("%Y%m%d_%H%M%S")
+        filename = log_dir + "input/" + nowstr + ".csv"
         df.to_csv(filename, index=False)
 
+        input_img_dir = log_dir + "input_img/" + nowstr
+        output_img_dir = log_dir + "decoded_img/" + nowstr
+        os.mkdir(input_img_dir)
+        os.mkdir(output_img_dir)
         for i, img in enumerate(self._imgs):
-            img.save(log_dir + "input_img/{:03d}.jpg".format(i))
+            img.save(input_img_dir + "/{:03d}.jpg".format(i))
             self._decoded_datas[i].save(
-                log_dir + "decoded/{:03d}.jpg".format(i))
+                output_img_dir + "/{:03d}.jpg".format(i))
+
+        # add
+        df = pd.DataFrame(data=outputs, columns=header)
+        filename = log_dir + "output/" + nowstr + ".csv"
+        df.to_csv(filename, index=False)
