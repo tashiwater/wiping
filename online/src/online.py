@@ -7,6 +7,7 @@ import torchvision
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+
 # from sklearn.decomposition import PCA
 import rospy
 
@@ -21,8 +22,7 @@ from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryG
 
 rospy.init_node("online")
 action_service_name = "/torobo/arm_controller/follow_joint_trajectory"
-JOINT_NAMES = ["arm/joint_" + str(i)
-               for i in range(1, 8)]  # from joint_1 to joint_8
+JOINT_NAMES = ["arm/joint_" + str(i) for i in range(1, 8)]  # from joint_1 to joint_8
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = CURRENT_DIR + "/../data/"
@@ -35,7 +35,8 @@ checkpoint = torch.load(cae_path)
 cae.load_state_dict(checkpoint["model"])
 
 high_freq = 4
-dataset = MyDataSet(cae, device=torch.device("cuda:0"), high_freq=high_freq)
+mode = "normal"
+dataset = MyDataSet(cae, torch.device("cuda:0"), high_freq, mode)
 
 in_size = 46
 net = MTRNN(
@@ -57,7 +58,7 @@ cf_states = []
 cs_states = []
 hz = 10
 rate = rospy.Rate(hz * high_freq)
-end_step = 30*hz
+end_step = 30 * hz
 motion_count = 0
 start_frame = 10  # 10 * high_freq
 
@@ -65,9 +66,14 @@ finish_s = 50
 start_s = rospy.Time.now().to_sec()
 now_s = 0
 old_s = 0
-output_interval_s = 1.0/hz-0.01
+output_interval_s = 1.0 / hz - 0.01
 
 print("start")
+for i in range(5):
+    dataset.cal_high_freq()
+    rate.sleep()
+
+
 while not rospy.is_shutdown() and motion_count < end_step:
     now_s = rospy.Time.now().to_sec() - start_s
 
@@ -76,19 +82,25 @@ while not rospy.is_shutdown() and motion_count < end_step:
     inputs_t = dataset.get_connected_data()
     if inputs_t is not None:
         motion_count += 1
-        output = net(inputs_t)
+        if mode == "normal":
+            output = net(inputs_t)
+        elif mode == "custom":
+            outpu = net(inputs_t[0], inputs_t[1], inputs_t[2])
         output = output.detach().numpy()[0]
-        position = output[:7]
-        position2 = dataset.reverse_position(position)
+        normalized_position = output[:7]
+        joint_position = dataset.reverse_position(normalized_position)
         if motion_count > start_frame:
-            follow_trajectory(
+            ret = follow_trajectory(
                 action_service_name,
                 joint_names=JOINT_NAMES,
-                positions=position2,
-                time_from_start=1
+                positions=joint_position,
+                time_from_start=1,
             )
+            print(ret)
             print(motion_count)
         outputs.append(output)
+    rate.sleep()
+dataset.save_inputs(outputs)
 # while not rospy.is_shutdown() and finish_s > now_s:
 #     now_s = rospy.Time.now().to_sec() - start_s
 #     motion_count += 1
@@ -110,9 +122,9 @@ while not rospy.is_shutdown() and motion_count < end_step:
 #             follow_trajectory(ac, JOINT_NAMES, position2)
 #             outputs.append(output)
 
-    # rate.sleep()
+
 # print(count)
-dataset.save_inputs(outputs)
+
 # df_output = pd.DataFrame(data=connected_data, columns=header)
 # df_output.to_excel(RESULT_DIR + "output{:02}.xlsx".format(j + 1), index=False)
 # np_output = outputs.view(-1, dataset[0][0].shape[1]).detach().numpy()

@@ -97,27 +97,27 @@ class CustomNet(nn.Module):
         tau={"tau_io": 2, "tau_cf": 5.0, "tau_cs": 70.0},
         open_rate=1,
     ):
-        super().__init__()
+        super(CustomNet, self).__init__()
         self.mtrnn = MTRNN(layer_size, tau, open_rate)
-        self.tactile_in = torch.nn.Sequential(
-            # 1*16*5
-            torch.nn.Conv2d(1, 8, 3, stride=2, padding=1),  # ->8*8*3
-            torch.nn.BatchNorm2d(8),
+        channel = 6
+        self.tactile_extract = torch.nn.Sequential(
+            # 1*12*5
+            torch.nn.Conv2d(1, channel, 3, stride=2, padding=1),  # ->channel*6*3
+            torch.nn.BatchNorm2d(channel),
             torch.nn.ReLU(),
-            torch.nn.Conv2d(8, 8, 3, stride=2, padding=1),  # 8*4*2
-            torch.nn.BatchNorm2d(8),
+            torch.nn.Conv2d(channel, channel, 3, stride=2, padding=1),  # channel*3*2
+            torch.nn.BatchNorm2d(channel),
             torch.nn.ReLU(),
-            torch.nn.Conv2d(8, 8, 3, stride=2, padding=1),  # 8*2*1
-            torch.nn.BatchNorm2d(8),
+            torch.nn.Conv2d(channel, channel, 3, stride=2, padding=1),  # channel*2*1
+            torch.nn.BatchNorm2d(channel),
             torch.nn.Flatten(),
-            torch.nn.Sigmoid(),
+            torch.nn.Tanh(),
         )
 
     def init_state(self, batch_size):
         self.mtrnn.init_state(batch_size)
 
     def forward(self, motion, tactile, img):
-        tactile = self.tactile_in(tactile)
+        tactile = self.tactile_extract(tactile)
         x = torch.cat([motion, tactile, img], axis=1)
         return self.mtrnn(x)
-

@@ -18,7 +18,7 @@ from crop import random_crop_image
 
 
 class OnlineDataSet:
-    def __init__(self, cae, device, high_freq):
+    def __init__(self, cae, device, high_freq, mode="normal"):
         rospy.Subscriber("/image_raw", Image, self.cb_image)
         rospy.Subscriber(
             "/touchence/sensor_data", Float32MultiArray, self.TouchSensorCallback
@@ -38,13 +38,22 @@ class OnlineDataSet:
         self._cae.eval()
         self._device = device
 
-        self._position_before_scale = [
+        self._position_max = [
             [-1.309, 4.451],
             [-2.094, 0.140],
             [-2.880, 2.880],
             [-0.524, 2.269],
             [-2.880, 2.880],
             [-1.396, 1.396],
+            [-1.396, 0.087],
+        ]
+        self._position_before_scale = [
+            [1.5, 3],
+            [-1, 0.140],
+            [-2, 0],
+            [-0.524, 2.269],
+            [-0.5, 2],
+            [-1, 0.5],
             [-1.396, 0.087],
         ]
         self._effort_before_scale = [
@@ -63,6 +72,8 @@ class OnlineDataSet:
         self._decoded_datas = []
         self.dsize = 5
         self._img_size = (128, 96)
+        self._tactile_frame_num = 5
+        self._mode = mode
 
     def cal_high_freq(self):
         if self._last_tactile is None:
@@ -83,6 +94,9 @@ class OnlineDataSet:
         position = self._get_mean(self._positions[-high_freq:])
         effort = self._get_mean(self._efforts[-high_freq:])
         tactile = self._get_mean(self._tactiles[-high_freq:])
+        if self._mode == "custom":
+            tactiles = self._tactiles[-self._tactile_frame_num :]
+
         img_feature = self.get_img_feature(self._imgs[-1])
 
         tactile_before_scale = [[0, 1] for _ in tactile]
@@ -92,12 +106,22 @@ class OnlineDataSet:
         effort = self.normalize(effort, self._effort_before_scale)
         tactile = self.normalize(tactile, tactile_before_scale)
         img_feature = self.normalize(img_feature, img_before_scale)
+        if self._mode == "custom":
+            normalized_tactile = []
+            for t in tactiles:
+                normalized_tactile.append(self.normalize(t, tactile_before_scale))
+            motor = torch.from_numpy(np.hstack([position, effort])).float()
+            img = torch.from_numpy(img_feature).float()
+            tactiles = torch.from_numpy(normalized_tactile).float()
+            self._custom_data = [motor, tactiles, img]
+
         # print(position.shape,effort.shape,tactile.shape,img_feature.shape )
-        connected_data = np.hstack(
-            [position, effort, tactile, img_feature]
-        )
+        connected_data = np.hstack([position, effort, tactile, img_feature])
         self._connected_data = torch.tensor(connected_data).float()
         self._connected_datas.append(connected_data)
+
+    def get_custom_data(self):
+        return self._custom_data
 
     def get_connected_data(self):
         return self._connected_data
@@ -106,7 +130,8 @@ class OnlineDataSet:
         img = self._bridge.imgmsg_to_cv2(data, "rgb8")
         img = PIL.Image.fromarray(img)
         img = img.resize(
-            (self._img_size[0]+self.dsize, self._img_size[1]+self.dsize))
+            (self._img_size[0] + self.dsize, self._img_size[1] + self.dsize)
+        )
         img = random_crop_image(img, self._img_size, test=True)
         self._last_img = img
 
@@ -158,9 +183,14 @@ class OnlineDataSet:
         )
 
     def reverse_position(self, position):
-        return self.normalize(position, [-1, 1], self._position_before_scale)
-
-    # def save_last_log(self):
+        real_position = self.normalize(
+            position, [-0.9, 0.9], self._position_before_scale
+        )
+        ret = []
+        for min_max, p in zip(self._position_max, real_position):
+            p_cliped = min(max(min_max[0], p), min_max[1])
+            ret.append(p_cliped)
+        return ret
 
     def save_inputs(self, outputs):
         data_dir = "/home/assimilation/TAKUMI_SHIMIZU/wiping_ws/src/wiping/online/data/"
@@ -180,8 +210,7 @@ class OnlineDataSet:
         os.mkdir(output_img_dir)
         for i, img in enumerate(self._imgs):
             img.save(input_img_dir + "/{:03d}.jpg".format(i))
-            self._decoded_datas[i].save(
-                output_img_dir + "/{:03d}.jpg".format(i))
+            self._decoded_datas[i].save(output_img_dir + "/{:03d}.jpg".format(i))
 
         # add
         df = pd.DataFrame(data=outputs, columns=header)
