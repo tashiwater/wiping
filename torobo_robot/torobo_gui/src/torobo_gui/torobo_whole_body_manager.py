@@ -755,12 +755,17 @@ class ToroboWholeBodyManager(Plugin):
             yaml.dump(param, outfile, default_flow_style=False)
 
         for j in range(5):
-            noise = 10 ** (-3)
             new_param = copy.deepcopy(param)
-            for i, d in enumerate(param[name]["teaching_trajectories"]["traj0"]):
-                for k in range(len(d["positions"])):
-                    new_param[name]["teaching_trajectories"]["traj0"][i][
-                        "positions"][k] += random.uniform(-noise, noise)
+            true_sequence = param[name]["teaching_trajectories"]["traj0"]
+            new_sequence = new_param[name]["teaching_trajectories"]["traj0"]
+            for i, d in enumerate(new_sequence):
+                if i == len(new_sequence)-1:
+                    continue
+                for k, now in enumerate(d["positions"]):
+                    vel = true_sequence[i+1]["positions"][k] - \
+                        true_sequence[i]["positions"][k]
+                    new_sequence[i+1]["positions"][k] = now + \
+                        vel + random.uniform(0.95, 1.05)
             # print(new_param)
             with open(fileName + "_{}.yaml".format(j+2), "w") as outfile:
                 yaml.dump(new_param, outfile, default_flow_style=False)
