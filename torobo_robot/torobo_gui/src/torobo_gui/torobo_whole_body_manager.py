@@ -293,7 +293,16 @@ class ToroboWholeBodyManager(Plugin):
                 self._widget.buttonGoStart.click()
 
         elif sender == self._widget.buttonReplay:
-            if self._widget.buttonReplay.text() == "replay":
+            if self._widget.buttonReplay.text() == "save":
+                self._widget.buttonReplay.setText("replay")
+                self.StopTrajectoryRecord()
+                self.RecordTrajectory(trajName)
+                self.save_sensors()
+                self.interval_para = 1
+            elif self._widget.buttonReplay.text() == "go start posi":
+                self._widget.buttonGoStart.click()
+                self._widget.buttonReplay.setText("save")
+            elif self._widget.buttonReplay.text() == "replay":
                 self._widget.buttonMovingMode.click()
                 self.clean_sensors()
                 self.interval_para = 4
@@ -301,15 +310,7 @@ class ToroboWholeBodyManager(Plugin):
                     origin_recordInterval / self.interval_para)
                 self.MoveTeachingTrajectory(trajName)
                 self._widget.buttonReplay.setText("go start posi")
-            elif self._widget.buttonReplay.text() == "go start posi":
-                self._widget.buttonGoStart.click()
-                self._widget.buttonReplay.setText("save")
-            else:
-                self._widget.buttonReplay.setText("replay")
-                self.StopTrajectoryRecord()
-                self.RecordTrajectory(trajName)
-                self.save_sensors()
-                self.interval_para = 1
+
         elif sender == self._widget.replayCancel:
             self.StopTrajectoryRecord()
             self.RecordTrajectory(trajName)
@@ -754,18 +755,18 @@ class ToroboWholeBodyManager(Plugin):
         with open(fileName + "_raw.yaml", "w") as outfile:
             yaml.dump(param, outfile, default_flow_style=False)
 
-        for j in range(5):
+        for j in range(10):
             new_param = copy.deepcopy(param)
             true_sequence = param[name]["teaching_trajectories"]["traj0"]
             new_sequence = new_param[name]["teaching_trajectories"]["traj0"]
             for i, d in enumerate(new_sequence):
                 if i == len(new_sequence)-1:
-                    continue
-                for k, now in enumerate(d["positions"]):
+                    break
+                for k, _ in enumerate(d["positions"]):
                     vel = true_sequence[i+1]["positions"][k] - \
                         true_sequence[i]["positions"][k]
-                    new_sequence[i+1]["positions"][k] = now + \
-                        vel + random.uniform(0.95, 1.05)
+                    new_sequence[i+1]["positions"][k] = new_sequence[i]["positions"][k] + \
+                        vel * random.uniform(0.9, 1.1)
             # print(new_param)
             with open(fileName + "_{}.yaml".format(j+2), "w") as outfile:
                 yaml.dump(new_param, outfile, default_flow_style=False)
