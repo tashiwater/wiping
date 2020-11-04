@@ -12,8 +12,8 @@ import pandas as pd
 import rospy
 
 from mydataset import OnlineDataSet as MyDataSet
-from MTRNN import MTRNN
-from CAE import CAE as CAE
+from model.MTRNN import MTRNN
+from model.CAE import CAE as CAE
 from torobo_func import follow_trajectory
 import actionlib
 
@@ -22,15 +22,16 @@ from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryG
 
 rospy.init_node("online")
 action_service_name = "/torobo/arm_controller/follow_joint_trajectory"
-JOINT_NAMES = ["arm/joint_" + str(i) for i in range(1, 8)]  # from joint_1 to joint_8
+JOINT_NAMES = ["arm/joint_" + str(i)
+               for i in range(1, 8)]  # from joint_1 to joint_8
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = CURRENT_DIR + "/../data/"
+DATA_DIR = CURRENT_DIR + "/../../data/"
 RESULT_DIR = DATA_DIR + "result/"
 MODEL_DIR = DATA_DIR + "model/"
 
 cae = CAE()
-cae_path = MODEL_DIR + "CAE/20201005_170823_2000.pth"
+cae_path = MODEL_DIR + "CAE/20201103_161859_500.pth"
 checkpoint = torch.load(cae_path)
 cae.load_state_dict(checkpoint["model"])
 
@@ -38,13 +39,14 @@ high_freq = 4
 mode = "normal"
 dataset = MyDataSet(cae, torch.device("cuda:0"), high_freq, mode)
 
-in_size = 46
+in_size = 41
 net = MTRNN(
-    layer_size={"in": in_size, "out": in_size, "io": 34, "cf": 200, "cs": 15},
-    tau={"tau_io": 2, "tau_cf": 5, "tau_cs": 70},
-    open_rate=0.3,
+    layer_size={"in": in_size, "out": in_size, "io": 50, "cf": 100, "cs": 15},
+    tau={"tau_io": 2, "tau_cf": 5, "tau_cs": 50},
+    open_rate=0.8,
+    activate=torch.nn.Tanh()
 )
-model_path = MODEL_DIR + "MTRNN/open01/cs70/20201008_151428_20500.pth"
+model_path = MODEL_DIR + "MTRNN/20201104_104502_8000.pth"
 checkpoint = torch.load(model_path)
 net.load_state_dict(checkpoint["model"])
 
@@ -60,7 +62,7 @@ hz = 10
 rate = rospy.Rate(hz * high_freq)
 end_step = 30 * hz
 motion_count = 0
-start_frame = 10  # 10 * high_freq
+start_frame = 20  # 10 * high_freq
 
 finish_s = 50
 start_s = rospy.Time.now().to_sec()
@@ -99,8 +101,9 @@ while not rospy.is_shutdown() and motion_count < end_step:
             print(ret)
             print(motion_count)
         outputs.append(output)
+        cs_states.append(net.cs_state.detach().numpy()[0])
     rate.sleep()
-dataset.save_inputs(outputs)
+dataset.save_inputs(outputs, cs_states)
 # while not rospy.is_shutdown() and finish_s > now_s:
 #     now_s = rospy.Time.now().to_sec() - start_s
 #     motion_count += 1

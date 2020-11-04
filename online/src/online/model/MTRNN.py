@@ -13,6 +13,7 @@ class MTRNN(nn.Module):  # [TODO]cannot use GPU now
         layer_size={"in": 1, "out": 1, "io": 3, "cf": 4, "cs": 5},
         tau={"tau_io": 2, "tau_cf": 5.0, "tau_cs": 70.0},
         open_rate=1,
+        activate=torch.nn.ReLU(),
     ):
         super(MTRNN, self).__init__()
         self.layer_size = layer_size
@@ -28,10 +29,10 @@ class MTRNN(nn.Module):  # [TODO]cannot use GPU now
         self.cf2cf = nn.Linear(self.layer_size["cf"], self.layer_size["cf"])
         self.cs2cf = nn.Linear(self.layer_size["cs"], self.layer_size["cf"])
         self.cs2cs = nn.Linear(self.layer_size["cs"], self.layer_size["cs"])
-        self.activate = torch.nn.Tanh()
+        self.activate = activate
 
     def init_state(self, batch_size):
-        self.last_output = torch.zeros(size=(batch_size, self.layer_size["out"]))
+        self.last_output = None
         self.io_state = torch.zeros(size=(batch_size, self.layer_size["io"]))
         self.cf_state = torch.zeros(size=(batch_size, self.layer_size["cf"]))
         self.cs_state = torch.zeros(size=(batch_size, self.layer_size["cs"]))
@@ -58,7 +59,13 @@ class MTRNN(nn.Module):  # [TODO]cannot use GPU now
         return self.activate(ret)
 
     def forward(self, x):  # x.shape(batch,x)
-        closed_x = x * self.open_rate + self.last_output * (1 - self.open_rate)
+        if (
+            self.last_output is None or self.open_rate == 1
+        ):  # start val is not changed by open_rate
+            closed_x = x
+        else:
+            closed_x = x * self.open_rate + self.last_output * (1 - self.open_rate)
+
         new_io_state = self._next_state(
             previous=self.io_state,
             new=[
@@ -79,7 +86,10 @@ class MTRNN(nn.Module):  # [TODO]cannot use GPU now
         )
         new_cs_state = self._next_state(
             previous=self.cs_state,
-            new=[self.cs2cs(self.cs_state), self.cf2cs(self.cf_state),],
+            new=[
+                self.cs2cs(self.cs_state),
+                self.cf2cs(self.cf_state),
+            ],
             tau=self.tau["tau_cs"],
         )
         self.io_state = new_io_state
@@ -88,36 +98,3 @@ class MTRNN(nn.Module):  # [TODO]cannot use GPU now
         y = self.activate(self.io2o(self.io_state))
         self.last_output = y
         return y
-
-
-class CustomNet(nn.Module):
-    def __init__(
-        self,
-        layer_size={"in": 1, "out": 1, "io": 3, "cf": 4, "cs": 5},
-        tau={"tau_io": 2, "tau_cf": 5.0, "tau_cs": 70.0},
-        open_rate=1,
-    ):
-        super(CustomNet, self).__init__()
-        self.mtrnn = MTRNN(layer_size, tau, open_rate)
-        channel = 6
-        self.tactile_extract = torch.nn.Sequential(
-            # 1*12*5
-            torch.nn.Conv2d(1, channel, 3, stride=2, padding=1),  # ->channel*6*3
-            torch.nn.BatchNorm2d(channel),
-            torch.nn.ReLU(),
-            torch.nn.Conv2d(channel, channel, 3, stride=2, padding=1),  # channel*3*2
-            torch.nn.BatchNorm2d(channel),
-            torch.nn.ReLU(),
-            torch.nn.Conv2d(channel, channel, 3, stride=2, padding=1),  # channel*2*1
-            torch.nn.BatchNorm2d(channel),
-            torch.nn.Flatten(),
-            torch.nn.Tanh(),
-        )
-
-    def init_state(self, batch_size):
-        self.mtrnn.init_state(batch_size)
-
-    def forward(self, motion, tactile, img):
-        tactile = self.tactile_extract(tactile)
-        x = torch.cat([motion, tactile, img], axis=1)
-        return self.mtrnn(x)

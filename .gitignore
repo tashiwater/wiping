@@ -4,4 +4,5 @@ __pycache__
 /data/output/*
 .vscode/
 /online/data/model/CAE
+/online/data/log/*
 .DS_Store

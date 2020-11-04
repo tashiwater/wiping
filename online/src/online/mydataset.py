@@ -57,10 +57,10 @@ class OnlineDataSet:
             [-1.396, 0.087],
         ]
         self._effort_before_scale = [
-            [-2, 40],
-            [-40, 15],
-            [-5, 15],
-            [-10, 15],
+            [10, 60],
+            [-10, 30],
+            [-15, 15],
+            [-15, 40],
             [-5, 5],
             [-5, 5],
             [-5, 5],
@@ -95,7 +95,7 @@ class OnlineDataSet:
         effort = self._get_mean(self._efforts[-high_freq:])
         tactile = self._get_mean(self._tactiles[-high_freq:])
         if self._mode == "custom":
-            tactiles = self._tactiles[-self._tactile_frame_num :]
+            tactiles = self._tactiles[-self._tactile_frame_num:]
 
         img_feature = self.get_img_feature(self._imgs[-1])
 
@@ -104,12 +104,13 @@ class OnlineDataSet:
 
         position = self.normalize(position, self._position_before_scale)
         effort = self.normalize(effort, self._effort_before_scale)
-        tactile = self.normalize(tactile, tactile_before_scale)
+        # tactile = self.normalize(tactile, tactile_before_scale)
         img_feature = self.normalize(img_feature, img_before_scale)
         if self._mode == "custom":
             normalized_tactile = []
             for t in tactiles:
-                normalized_tactile.append(self.normalize(t, tactile_before_scale))
+                normalized_tactile.append(
+                    self.normalize(t, tactile_before_scale))
             motor = torch.from_numpy(np.hstack([position, effort])).float()
             img = torch.from_numpy(img_feature).float()
             tactiles = torch.from_numpy(normalized_tactile).float()
@@ -117,7 +118,8 @@ class OnlineDataSet:
 
         # print(position.shape,effort.shape,tactile.shape,img_feature.shape )
         connected_data = np.hstack([position, effort, tactile, img_feature])
-        self._connected_data = torch.tensor(connected_data).float()
+        self._connected_data = torch.tensor(
+            connected_data).float().unsqueeze(0)
         self._connected_datas.append(connected_data)
 
     def get_custom_data(self):
@@ -132,7 +134,6 @@ class OnlineDataSet:
         img = img.resize(
             (self._img_size[0] + self.dsize, self._img_size[1] + self.dsize)
         )
-        img = random_crop_image(img, self._img_size, test=True)
         self._last_img = img
 
     def TouchSensorCallback(self, data):
@@ -143,12 +144,13 @@ class OnlineDataSet:
         self._last_effort = data.effort
 
     def get_img_feature(self, img):
+        img = random_crop_image(img, self._img_size, test=True)
         img_tensor = torchvision.transforms.ToTensor()(img)
         img_tensor = torch.unsqueeze(img_tensor, 0)
         # img_tensor = img_tensor.to(self._device)
-        img_feature, box_class = self._cae.encoder(img_tensor)
-
-        val, class_num = torch.max(box_class, 1)
+        # img_feature, box_class = self._cae.encoder(img_tensor)
+        img_feature = self._cae.encoder(img_tensor)
+        # val, class_num = torch.max(box_class, 1)
         # img_feature = torch.zeros(size = (1,20))
         img = self._cae.decoder(img_feature)
         rgb = torchvision.transforms.functional.to_pil_image(img[0], "RGB")
@@ -179,7 +181,7 @@ class OnlineDataSet:
             [add_word + "position{}".format(i) for i in range(7)]
             + [add_word + "torque{}".format(i) for i in range(7)]
             + [add_word + "tactile{}".format(i) for i in range(12)]
-            + [add_word + "image{}".format(i) for i in range(20)]
+            + [add_word + "image{}".format(i) for i in range(15)]
         )
 
     def reverse_position(self, position):
@@ -192,7 +194,7 @@ class OnlineDataSet:
             ret.append(p_cliped)
         return ret
 
-    def save_inputs(self, outputs):
+    def save_inputs(self, outputs, cs_states):
         data_dir = "/home/assimilation/TAKUMI_SHIMIZU/wiping_ws/src/wiping/online/data/"
 
         log_dir = data_dir + "log/"
@@ -210,9 +212,19 @@ class OnlineDataSet:
         os.mkdir(output_img_dir)
         for i, img in enumerate(self._imgs):
             img.save(input_img_dir + "/{:03d}.jpg".format(i))
-            self._decoded_datas[i].save(output_img_dir + "/{:03d}.jpg".format(i))
+            self._decoded_datas[i].save(
+                output_img_dir + "/{:03d}.jpg".format(i))
 
         # add
         df = pd.DataFrame(data=outputs, columns=header)
-        filename = log_dir + "output/" + nowstr + ".csv"
+        filename = log_dir + "output/" + nowstr + "output.csv"
         df.to_csv(filename, index=False)
+        df = pd.DataFrame(data=cs_states, columns=[
+                          "cs_states{}".format(i) for i in range(len(cs_states[0]))])
+        filename = log_dir + "output/" + nowstr + "cs.csv"
+        df.to_csv(filename, index=False)
+
+        # #DECODE OUTPUT
+        # img = self._cae.decoder(img_feature)
+        # rgb = torchvision.transforms.functional.to_pil_image(img[0], "RGB")
+        # self._decoded_datas.append(rgb)
