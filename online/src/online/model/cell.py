@@ -42,6 +42,8 @@ class Cell(torch.nn.Module):
             self.activate = torch.nn.Softmax(dim=1)
 
         self._on_batchnorm = on_batchnorm
+        if on_batchnorm is False:
+            self.batchnorm = None
 
     def forward(self, x):
         x = self.nn(x)

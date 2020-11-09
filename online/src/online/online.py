@@ -11,8 +11,9 @@ import pandas as pd
 # from sklearn.decomposition import PCA
 import rospy
 
-from mydataset import OnlineDataSet as MyDataSet
+from dataset_CNNMTRNN import OnlineDataSet as MyDataSet
 from model.MTRNN import MTRNN
+from model.CNNMTRNN import CNNMTRNN
 from model.CAE import CAE as CAE
 from torobo_func import follow_trajectory
 import actionlib
@@ -30,31 +31,42 @@ DATA_DIR = CURRENT_DIR + "/../../data/"
 RESULT_DIR = DATA_DIR + "result/"
 MODEL_DIR = DATA_DIR + "model/"
 
-cae = CAE()
-cae_path = MODEL_DIR + "CAE/20201103_161859_500.pth"
-checkpoint = torch.load(cae_path)
-cae.load_state_dict(checkpoint["model"])
-
+# cae = CAE()
+# cae_path = MODEL_DIR + "CAE/20201103_161859_500.pth"
+# checkpoint = torch.load(cae_path)
+# cae.load_state_dict(checkpoint["model"])
+cae = None
 high_freq = 4
-mode = "normal"
-dataset = MyDataSet(cae, torch.device("cuda:0"), high_freq, mode)
+mode = "CNNMTRNN"
+device = torch.device("cuda:0")
+dataset = MyDataSet(device, high_freq, mode)
 
 in_size = 41
-net = MTRNN(
+# net = MTRNN(
+#     layer_size={"in": in_size, "out": in_size, "io": 50, "cf": 100, "cs": 15},
+#     tau={"tau_io": 2, "tau_cf": 5, "tau_cs": 50},
+#     open_rate=0.8,
+#     activate=torch.nn.Tanh()
+# )
+# model_path = MODEL_DIR + "MTRNN/20201104_104502_8000.pth"
+# checkpoint = torch.load(model_path)
+# net.load_state_dict(checkpoint["model"])
+net = CNNMTRNN(
     layer_size={"in": in_size, "out": in_size, "io": 50, "cf": 100, "cs": 15},
     tau={"tau_io": 2, "tau_cf": 5, "tau_cs": 50},
-    open_rate=0.8,
-    activate=torch.nn.Tanh()
+    open_rate=0.9
 )
-model_path = MODEL_DIR + "MTRNN/20201104_104502_8000.pth"
-checkpoint = torch.load(model_path)
+model_path = MODEL_DIR + "CNNMTRNN/20201107_085638_4000.pth"
+checkpoint = torch.load(model_path, map_location=torch.device("cpu"))
 net.load_state_dict(checkpoint["model"])
+# net.to(device)
 
 print(net)
 net.eval()
 net.init_state(1)
 alltype_cs = []
 outputs = []
+output_imgs = []
 io_states = []
 cf_states = []
 cs_states = []
@@ -88,6 +100,9 @@ while not rospy.is_shutdown() and motion_count < end_step:
             output = net(inputs_t)
         elif mode == "custom":
             outpu = net(inputs_t[0], inputs_t[1], inputs_t[2])
+        elif mode == "CNNMTRNN":
+            # inputs_t = inputs_t[0].to(device), inputs_t[1].to(device)
+            output, output_img = net(inputs_t[0], inputs_t[1])
         output = output.detach().numpy()[0]
         normalized_position = output[:7]
         joint_position = dataset.reverse_position(normalized_position)
@@ -101,9 +116,10 @@ while not rospy.is_shutdown() and motion_count < end_step:
             print(ret)
             print(motion_count)
         outputs.append(output)
-        cs_states.append(net.cs_state.detach().numpy()[0])
+        output_imgs.append(output_img[0])
+        # cs_states.append(net.mtrnn.cs_state.detach().numpy()[0])
     rate.sleep()
-dataset.save_inputs(outputs, cs_states)
+dataset.save_inputs(outputs, cs_states, output_imgs)
 # while not rospy.is_shutdown() and finish_s > now_s:
 #     now_s = rospy.Time.now().to_sec() - start_s
 #     motion_count += 1

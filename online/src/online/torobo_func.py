@@ -37,7 +37,7 @@ def follow_trajectory(action_service_name, joint_names, positions, time_from_sta
     # temp = ac.done_condition
     # ac.done_condition = False
     finished_before_timeout = ac.wait_for_result(
-        timeout=rospy.Duration(time_from_start + 2.0)
+        timeout=rospy.Duration(time_from_start + 0)
     )
     # ac.done_condition = temp
 
