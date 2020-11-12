@@ -294,14 +294,14 @@ class ToroboWholeBodyManager(Plugin):
 
         elif sender == self._widget.buttonReplay:
             if self._widget.buttonReplay.text() == "save":
-                self._widget.buttonReplay.setText("replay")
+                self._widget.buttonReplay.setText("go start posi")
                 self.StopTrajectoryRecord()
                 self.RecordTrajectory(trajName)
                 self.save_sensors()
                 self.interval_para = 1
             elif self._widget.buttonReplay.text() == "go start posi":
                 self._widget.buttonGoStart.click()
-                self._widget.buttonReplay.setText("save")
+                self._widget.buttonReplay.setText("replay")
             elif self._widget.buttonReplay.text() == "replay":
                 self._widget.buttonMovingMode.click()
                 self.clean_sensors()
@@ -309,7 +309,7 @@ class ToroboWholeBodyManager(Plugin):
                 self.StartTrajectoryRecord(
                     origin_recordInterval / self.interval_para)
                 self.MoveTeachingTrajectory(trajName)
-                self._widget.buttonReplay.setText("go start posi")
+                self._widget.buttonReplay.setText("save")
 
         elif sender == self._widget.replayCancel:
             self.StopTrajectoryRecord()
