@@ -11,7 +11,7 @@ import pandas as pd
 # from sklearn.decomposition import PCA
 import rospy
 
-from dataset_CNNMTRNN import OnlineDataSet as MyDataSet
+from mydataset import OnlineDataSet as MyDataSet
 from model.MTRNN import MTRNN
 from model.CNNMTRNN import CNNMTRNN
 from model.CAE import CAE as CAE
@@ -31,34 +31,33 @@ DATA_DIR = CURRENT_DIR + "/../../data/"
 RESULT_DIR = DATA_DIR + "result/"
 MODEL_DIR = DATA_DIR + "model/"
 
-# cae = CAE()
-# cae_path = MODEL_DIR + "CAE/20201103_161859_500.pth"
-# checkpoint = torch.load(cae_path)
-# cae.load_state_dict(checkpoint["model"])
-cae = None
+cae = CAE()
+cae_path = MODEL_DIR + "CAE/20201112_185205_6000.pth"
+checkpoint = torch.load(cae_path, map_location=torch.device("cpu"))
+cae.load_state_dict(checkpoint["model"])
 high_freq = 4
-mode = "CNNMTRNN"
+mode = "normal"
 device = torch.device("cuda:0")
-dataset = MyDataSet(device, high_freq, mode)
-
+dataset = MyDataSet(cae, device, high_freq, mode)
+open_rate = 0.3
 in_size = 41
-# net = MTRNN(
-#     layer_size={"in": in_size, "out": in_size, "io": 50, "cf": 100, "cs": 15},
-#     tau={"tau_io": 2, "tau_cf": 5, "tau_cs": 50},
-#     open_rate=0.8,
-#     activate=torch.nn.Tanh()
-# )
-# model_path = MODEL_DIR + "MTRNN/20201104_104502_8000.pth"
-# checkpoint = torch.load(model_path)
-# net.load_state_dict(checkpoint["model"])
-net = CNNMTRNN(
+net = MTRNN(
     layer_size={"in": in_size, "out": in_size, "io": 50, "cf": 100, "cs": 15},
-    tau={"tau_io": 2, "tau_cf": 5, "tau_cs": 50},
-    open_rate=0.9
+    tau={"tau_io": 2, "tau_cf": 5, "tau_cs": 40},
+    open_rate=open_rate,
+    activate=torch.nn.Tanh()
 )
-model_path = MODEL_DIR + "CNNMTRNN/20201107_085638_4000.pth"
+model_path = MODEL_DIR + "MTRNN/20201114_100224_5000.pth"
 checkpoint = torch.load(model_path, map_location=torch.device("cpu"))
 net.load_state_dict(checkpoint["model"])
+# net = CNNMTRNN(
+#     layer_size={"in": in_size, "out": in_size, "io": 50, "cf": 100, "cs": 15},
+#     tau={"tau_io": 2, "tau_cf": 5, "tau_cs": 50},
+#     open_rate=0.9
+# )
+# model_path = MODEL_DIR + "CNNMTRNN/20201107_085638_4000.pth"
+# checkpoint = torch.load(model_path, map_location=torch.device("cpu"))
+# net.load_state_dict(checkpoint["model"])
 # net.to(device)
 
 print(net)
@@ -116,10 +115,11 @@ while not rospy.is_shutdown() and motion_count < end_step:
             print(ret)
             print(motion_count)
         outputs.append(output)
-        output_imgs.append(output_img[0])
-        # cs_states.append(net.mtrnn.cs_state.detach().numpy()[0])
+        # output_imgs.append(output_img[0])
+        cs_states.append(net.cs_state.detach().numpy()[0])
     rate.sleep()
-dataset.save_inputs(outputs, cs_states, output_imgs)
+# dataset.save_inputs(outputs, cs_states, output_imgs)
+dataset.save_inputs(outputs, cs_states, open_rate)
 # while not rospy.is_shutdown() and finish_s > now_s:
 #     now_s = rospy.Time.now().to_sec() - start_s
 #     motion_count += 1

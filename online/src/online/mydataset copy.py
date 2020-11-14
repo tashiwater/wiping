@@ -48,19 +48,19 @@ class OnlineDataSet:
             [-1.396, 0.087],
         ]
         self._position_before_scale = [
-            [1.5, 2],
-            [-1, 0],
-            [-0.5, 0],
-            [0.5, 1.5],
-            [0, 0.5],
-            [-0.5, 0.5],
+            [1.5, 3],
+            [-1, 0.140],
+            [-2, 0],
+            [-0.524, 2.269],
+            [-0.5, 2],
+            [-1, 0.5],
             [-1.396, 0.087],
         ]
         self._effort_before_scale = [
-            [20, 50],
-            [-10, 20],
-            [-5, 10],
-            [-10, 15],
+            [10, 60],
+            [-10, 30],
+            [-15, 15],
+            [-15, 40],
             [-5, 5],
             [-5, 5],
             [-5, 5],
@@ -100,12 +100,12 @@ class OnlineDataSet:
         img_feature = self.get_img_feature(self._imgs[-1])
 
         tactile_before_scale = [[0, 1] for _ in tactile]
-        img_before_scale = [[-0.25, 0.25] for _ in img_feature]
+        img_before_scale = [[0, 1] for _ in img_feature]
 
         position = self.normalize(position, self._position_before_scale)
         effort = self.normalize(effort, self._effort_before_scale)
-        tactile = self.normalize(tactile, tactile_before_scale)
-        img_feature = self.normalize(img_feature, img_before_scale)
+        # tactile = self.normalize(tactile, tactile_before_scale)
+        # img_feature = self.normalize(img_feature, img_before_scale)
         if self._mode == "custom":
             normalized_tactile = []
             for t in tactiles:
