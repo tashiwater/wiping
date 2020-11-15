@@ -194,19 +194,19 @@ class OnlineDataSet:
             ret.append(p_cliped)
         return ret
 
-    def save_inputs(self, outputs, cs_states, open_rate):
+    def save_inputs(self, outputs, cs_states, open_rate, container):
         data_dir = "/home/assimilation/TAKUMI_SHIMIZU/wiping_ws/src/wiping/online/data/"
 
         log_dir = data_dir + "log/"
 
-        header = self.get_header()
-        df = pd.DataFrame(data=self._connected_datas,
-                          columns=self.get_header("in_"))
+        df_input = pd.DataFrame(data=self._connected_datas,
+                                columns=self.get_header("in_"))
+
         now = datetime.datetime.now()
         nowstr = now.strftime("%Y%m%d_%H%M%S") + \
-            "open{:02d}".format(int(open_rate*10))
-        filename = log_dir + "input/" + nowstr + ".csv"
-        df.to_csv(filename, index=False)
+            "_type{}_open{:02d}".format(container, int(open_rate*10))
+        # filename = log_dir + "input/" + nowstr + ".csv"
+        # df.to_csv(filename, index=False)
 
         input_img_dir = log_dir + "input_img/" + nowstr
         output_img_dir = log_dir + "decoded_img/" + nowstr
@@ -218,13 +218,16 @@ class OnlineDataSet:
                 output_img_dir + "/{:03d}.jpg".format(i))
 
         # add
-        df = pd.DataFrame(data=outputs, columns=header)
+        df_output = pd.DataFrame(data=outputs, columns=self.get_header("out_"))
+
         filename = log_dir + "output/" + nowstr + "output.csv"
-        df.to_csv(filename, index=False)
-        df = pd.DataFrame(data=cs_states, columns=[
-                          "cs_states{}".format(i) for i in range(len(cs_states[0]))])
-        filename = log_dir + "output/" + nowstr + "cs.csv"
-        df.to_csv(filename, index=False)
+        # df.to_csv(filename, index=False)
+        df_cs = pd.DataFrame(data=cs_states, columns=[
+            "cs_states{}".format(i) for i in range(len(cs_states[0]))])
+
+        df_concat = pd.concat([df_input, df_output, df_cs], axis=1, sort=False)
+        filename = log_dir + "output/" + nowstr + ".csv"
+        df_concat.to_csv(filename, index=False)
 
         # #DECODE OUTPUT
         # img = self._cae.decoder(img_feature)

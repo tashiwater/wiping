@@ -7,6 +7,7 @@ import torchvision
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import sys
 
 # from sklearn.decomposition import PCA
 import rospy
@@ -20,6 +21,9 @@ import actionlib
 
 from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
 
+if len(sys.argv) != 2:
+    container = int(sys.argv[1])
+    open_rate = float(sys.argv[2])
 
 rospy.init_node("online")
 action_service_name = "/torobo/arm_controller/follow_joint_trajectory"
@@ -39,7 +43,7 @@ high_freq = 4
 mode = "normal"
 device = torch.device("cuda:0")
 dataset = MyDataSet(cae, device, high_freq, mode)
-open_rate = 0.3
+
 in_size = 41
 net = MTRNN(
     layer_size={"in": in_size, "out": in_size, "io": 50, "cf": 100, "cs": 15},
@@ -119,7 +123,7 @@ while not rospy.is_shutdown() and motion_count < end_step:
         cs_states.append(net.cs_state.detach().numpy()[0])
     rate.sleep()
 # dataset.save_inputs(outputs, cs_states, output_imgs)
-dataset.save_inputs(outputs, cs_states, open_rate)
+dataset.save_inputs(outputs, cs_states, open_rate, container)
 # while not rospy.is_shutdown() and finish_s > now_s:
 #     now_s = rospy.Time.now().to_sec() - start_s
 #     motion_count += 1
