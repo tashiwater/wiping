@@ -67,8 +67,8 @@ class TactileBar(QWidget):
         }
         """
         self._bar_update_count = 0
-        self._touchbar_list = [self.progressBar,
-                               self.progressBar_2, self.progressBar_3]
+        self._touchbar_list = [
+            self.progressBar, self.progressBar_2, self.progressBar_3, self.progressBar_4]
         self._bar_state = [None for i in range(len(self._touchbar_list))]
         self._touch = None
 
