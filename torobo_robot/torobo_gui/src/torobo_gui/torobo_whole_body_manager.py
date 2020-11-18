@@ -257,8 +257,8 @@ class ToroboWholeBodyManager(Plugin):
         elif sender == self._widget.buttonTrajRun:
             self.MoveTeachingTrajectory(trajName)
             self._widget.buttonTrajRecord.setText("Record\nStop")
-            self.StartTrajectoryRecord_for_retry(
-                recordInterval)  # Add by Saito
+            # self.StartTrajectoryRecord_for_retry(
+            #     recordInterval)  # Add by Saito
         elif sender == self._widget.buttonSaveRosParam:
             self.SaveRosParam()
         elif sender == self._widget.buttonLoadRosParam:

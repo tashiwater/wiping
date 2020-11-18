@@ -12,7 +12,7 @@ import sys
 # from sklearn.decomposition import PCA
 import rospy
 
-from mydataset import OnlineDataSet as MyDataSet
+from dataset_noimg import OnlineDataSet as MyDataSet
 from model.MTRNN import MTRNN
 from model.CNNMTRNN import CNNMTRNN
 from model.CAE import CAE as CAE
@@ -22,8 +22,9 @@ import actionlib
 from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
 
 if len(sys.argv) != 2:
-    container = int(sys.argv[1])
-    open_rate = float(sys.argv[2])
+    container = int(sys.argv[2])
+    open_rate = float(sys.argv[1])
+
 
 rospy.init_node("online")
 action_service_name = "/torobo/arm_controller/follow_joint_trajectory"
@@ -35,23 +36,27 @@ DATA_DIR = CURRENT_DIR + "/../../data/"
 RESULT_DIR = DATA_DIR + "result/"
 MODEL_DIR = DATA_DIR + "model/"
 
-cae = CAE()
-cae_path = MODEL_DIR + "CAE/20201116_174430_2000.pth"
-checkpoint = torch.load(cae_path, map_location=torch.device("cpu"))
-cae.load_state_dict(checkpoint["model"])
+cae = None
+# cae = CAE()
+# cae_path = MODEL_DIR + "CAE/20201116_174430_2000.pth"
+# checkpoint = torch.load(cae_path, map_location=torch.device("cpu"))
+# cae.load_state_dict(checkpoint["model"])
 high_freq = 4
 mode = "normal"
 device = torch.device("cuda:0")
 dataset = MyDataSet(cae, device, high_freq, mode)
 
-in_size = 45
+in_size = 30
+cf_num = 90
+cs_num = 10
 net = MTRNN(
-    layer_size={"in": in_size, "out": in_size, "io": 50, "cf": 100, "cs": 15},
-    tau={"tau_io": 2, "tau_cf": 5, "tau_cs": 40},
+    layer_size={"in": in_size, "out": in_size,
+                "io": 50, "cf": cf_num, "cs": cs_num},
+    tau={"tau_io": 2, "tau_cf": 5, "tau_cs": 30},
     open_rate=open_rate,
     activate=torch.nn.Tanh()
 )
-model_path = MODEL_DIR + "MTRNN/20201116_193034_5000.pth"
+model_path = MODEL_DIR + "MTRNN/1116_10000/{}_{}.pth".format(cf_num, cs_num)
 checkpoint = torch.load(model_path, map_location=torch.device("cpu"))
 net.load_state_dict(checkpoint["model"])
 # net = CNNMTRNN(
@@ -77,7 +82,7 @@ hz = 10
 rate = rospy.Rate(hz * high_freq)
 end_step = 30 * hz
 motion_count = 0
-start_frame = 20  # 10 * high_freq
+start_frame = 0  # 10 * high_freq
 
 finish_s = 50
 start_s = rospy.Time.now().to_sec()

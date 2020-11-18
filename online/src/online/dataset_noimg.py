@@ -33,10 +33,10 @@ class OnlineDataSet:
         self._efforts = []
         self._high_freq = high_freq
 
-        self._cae = cae
-        # self._cae.to(device)
-        self._cae.eval()
-        self._device = device
+        # self._cae = cae
+        # # self._cae.to(device)
+        # self._cae.eval()
+        # self._device = device
 
         self._position_max = [
             [-1.309, 4.451],
@@ -97,15 +97,15 @@ class OnlineDataSet:
         if self._mode == "custom":
             tactiles = self._tactiles[-self._tactile_frame_num:]
 
-        img_feature = self.get_img_feature(self._imgs[-1])
+        # img_feature = self.get_img_feature(self._imgs[-1])
 
         tactile_before_scale = [[0, 1] for _ in tactile]
-        img_before_scale = [[-0.9, 0.9] for _ in img_feature]
+        # img_before_scale = [[-0.9, 0.9] for _ in img_feature]
 
         position = self.normalize(position, self._position_before_scale)
         effort = self.normalize(effort, self._effort_before_scale)
         tactile = self.normalize(tactile, tactile_before_scale)
-        img_feature = self.normalize(img_feature, img_before_scale)
+        # img_feature = self.normalize(img_feature, img_before_scale)
         if self._mode == "custom":
             normalized_tactile = []
             for t in tactiles:
@@ -117,7 +117,7 @@ class OnlineDataSet:
             self._custom_data = [motor, tactiles, img]
 
         # print(position.shape,effort.shape,tactile.shape,img_feature.shape )
-        connected_data = np.hstack([position, effort, tactile, img_feature])
+        connected_data = np.hstack([position, effort, tactile])
         self._connected_data = torch.tensor(
             connected_data).float().unsqueeze(0)
         self._connected_datas.append(connected_data)
@@ -181,7 +181,7 @@ class OnlineDataSet:
             [add_word + "position{}".format(i) for i in range(7)]
             + [add_word + "torque{}".format(i) for i in range(7)]
             + [add_word + "tactile{}".format(i) for i in range(16)]
-            + [add_word + "image{}".format(i) for i in range(15)]
+            # + [add_word + "image{}".format(i) for i in range(15)]
         )
 
     def reverse_position(self, position):
@@ -214,8 +214,8 @@ class OnlineDataSet:
         os.mkdir(output_img_dir)
         for i, img in enumerate(self._imgs):
             img.save(input_img_dir + "/{:03d}.jpg".format(i))
-            self._decoded_datas[i].save(
-                output_img_dir + "/{:03d}.jpg".format(i))
+            # self._decoded_datas[i].save(
+            #     output_img_dir + "/{:03d}.jpg".format(i))
 
         # add
         df_output = pd.DataFrame(data=outputs, columns=self.get_header("out_"))
