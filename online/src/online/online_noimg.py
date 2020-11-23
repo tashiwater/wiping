@@ -47,7 +47,7 @@ device = torch.device("cuda:0")
 dataset = MyDataSet(cae, device, high_freq, mode)
 
 in_size = 30
-cf_num = 90
+cf_num = 80
 cs_num = 10
 net = MTRNN(
     layer_size={"in": in_size, "out": in_size,
@@ -56,7 +56,7 @@ net = MTRNN(
     open_rate=open_rate,
     activate=torch.nn.Tanh()
 )
-model_path = MODEL_DIR + "MTRNN/1116_10000/{}_{}.pth".format(cf_num, cs_num)
+model_path = MODEL_DIR + "MTRNN/noimg/20201122_202559_10000finish.pth"
 checkpoint = torch.load(model_path, map_location=torch.device("cpu"))
 net.load_state_dict(checkpoint["model"])
 # net = CNNMTRNN(

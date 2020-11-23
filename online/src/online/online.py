@@ -13,7 +13,7 @@ import sys
 import rospy
 
 from mydataset import OnlineDataSet as MyDataSet
-from model.MTRNN import MTRNN
+from model.MTRNN_nosubtask import MTRNN
 from model.CNNMTRNN import CNNMTRNN
 from model.CAE import CAE as CAE
 from torobo_func import follow_trajectory
@@ -22,8 +22,8 @@ import actionlib
 from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
 
 if len(sys.argv) != 2:
-    container = int(sys.argv[1])
-    open_rate = float(sys.argv[2])
+    container = int(sys.argv[2])
+    open_rate = float(sys.argv[1])
 
 rospy.init_node("online")
 action_service_name = "/torobo/arm_controller/follow_joint_trajectory"
@@ -36,7 +36,7 @@ RESULT_DIR = DATA_DIR + "result/"
 MODEL_DIR = DATA_DIR + "model/"
 
 cae = CAE()
-cae_path = MODEL_DIR + "CAE/20201116_174430_2000.pth"
+cae_path = MODEL_DIR + "CAE/20201120_231742_2000finish.pth"
 checkpoint = torch.load(cae_path, map_location=torch.device("cpu"))
 cae.load_state_dict(checkpoint["model"])
 high_freq = 4
@@ -45,13 +45,14 @@ device = torch.device("cuda:0")
 dataset = MyDataSet(cae, device, high_freq, mode)
 
 in_size = 45
+out_size = 30
 net = MTRNN(
-    layer_size={"in": in_size, "out": in_size, "io": 50, "cf": 100, "cs": 15},
-    tau={"tau_io": 2, "tau_cf": 5, "tau_cs": 40},
+    layer_size={"in": in_size, "out": out_size, "io": 50, "cf": 80, "cs": 10},
+    tau={"tau_io": 2, "tau_cf": 5, "tau_cs": 30},
     open_rate=open_rate,
     activate=torch.nn.Tanh()
 )
-model_path = MODEL_DIR + "MTRNN/20201116_193034_5000.pth"
+model_path = MODEL_DIR + "MTRNN/nosubtask/all/img/20201122_233627_10000finish.pth"
 checkpoint = torch.load(model_path, map_location=torch.device("cpu"))
 net.load_state_dict(checkpoint["model"])
 # net = CNNMTRNN(
@@ -77,7 +78,7 @@ hz = 10
 rate = rospy.Rate(hz * high_freq)
 end_step = 30 * hz
 motion_count = 0
-start_frame = 20  # 10 * high_freq
+start_frame = 0  # 10 * high_freq
 
 finish_s = 50
 start_s = rospy.Time.now().to_sec()
@@ -100,9 +101,10 @@ while not rospy.is_shutdown() and motion_count < end_step:
     if inputs_t is not None:
         motion_count += 1
         if mode == "normal":
+            # inputs_t = torch.cat([inputs_t[:, :7], inputs_t[:, 30:]], axis=1)
             output = net(inputs_t)
         elif mode == "custom":
-            outpu = net(inputs_t[0], inputs_t[1], inputs_t[2])
+            output = net(inputs_t[0], inputs_t[1], inputs_t[2])
         elif mode == "CNNMTRNN":
             # inputs_t = inputs_t[0].to(device), inputs_t[1].to(device)
             output, output_img = net(inputs_t[0], inputs_t[1])

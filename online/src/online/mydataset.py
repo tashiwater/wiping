@@ -49,21 +49,21 @@ class OnlineDataSet:
         ]
         self._position_before_scale = [
             [1.5, 2],
-            [-1, 0],
-            [-0.5, 0],
-            [0.5, 1.5],
+            [-1, 0.1],
+            [-0.5, 0.1],
+            [1, 2],
             [0, 1],
             [-0.5, 0.5],
-            [-1.396, 0.087],
+            [-1.396, -1],
         ]
         self._effort_before_scale = [
             [20, 50],
             [-10, 20],
+            [-10, 10],
+            [-10, 10],
+            [-5, 5],
+            [-5, 5],
             [-5, 10],
-            [-10, 15],
-            [-5, 5],
-            [-5, 5],
-            [-5, 5],
         ]
         self._last_tactile = None
         self._last_img = None
@@ -218,7 +218,8 @@ class OnlineDataSet:
                 output_img_dir + "/{:03d}.jpg".format(i))
 
         # add
-        df_output = pd.DataFrame(data=outputs, columns=self.get_header("out_"))
+        df_output = pd.DataFrame(
+            data=outputs, columns=self.get_header("out_")[:len(outputs[0])])
 
         filename = log_dir + "output/" + nowstr + "output.csv"
         # df.to_csv(filename, index=False)
