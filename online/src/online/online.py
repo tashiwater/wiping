@@ -36,7 +36,7 @@ RESULT_DIR = DATA_DIR + "result/"
 MODEL_DIR = DATA_DIR + "model/"
 
 cae = CAE()
-cae_path = MODEL_DIR + "CAE/20201120_231742_2000finish.pth"
+cae_path = MODEL_DIR + "CAE/1123/20201123_221611_3000finish.pth"
 checkpoint = torch.load(cae_path, map_location=torch.device("cpu"))
 cae.load_state_dict(checkpoint["model"])
 high_freq = 4
@@ -45,14 +45,14 @@ device = torch.device("cuda:0")
 dataset = MyDataSet(cae, device, high_freq, mode)
 
 in_size = 45
-out_size = 30
+out_size = 45
 net = MTRNN(
     layer_size={"in": in_size, "out": out_size, "io": 50, "cf": 80, "cs": 10},
     tau={"tau_io": 2, "tau_cf": 5, "tau_cs": 30},
     open_rate=open_rate,
     activate=torch.nn.Tanh()
 )
-model_path = MODEL_DIR + "MTRNN/nosubtask/all/img/20201122_233627_10000finish.pth"
+model_path = MODEL_DIR + "MTRNN/all_all/20201124_171806_10000finish.pth"
 checkpoint = torch.load(model_path, map_location=torch.device("cpu"))
 net.load_state_dict(checkpoint["model"])
 # net = CNNMTRNN(
@@ -76,7 +76,7 @@ cf_states = []
 cs_states = []
 hz = 10
 rate = rospy.Rate(hz * high_freq)
-end_step = 30 * hz
+end_step = 20 * hz
 motion_count = 0
 start_frame = 0  # 10 * high_freq
 

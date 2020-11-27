@@ -210,8 +210,10 @@ class OnlineDataSet:
 
         input_img_dir = log_dir + "input_img/" + nowstr
         output_img_dir = log_dir + "decoded_img/" + nowstr
-        os.mkdir(input_img_dir)
-        os.mkdir(output_img_dir)
+        predict_img_dir = log_dir + "predict_img/" + nowstr
+        os.makedirs(input_img_dir)
+        os.makedirs(output_img_dir)
+        os.makedirs(predict_img_dir)
         for i, img in enumerate(self._imgs):
             img.save(input_img_dir + "/{:03d}.jpg".format(i))
             self._decoded_datas[i].save(
@@ -230,6 +232,13 @@ class OnlineDataSet:
         filename = log_dir + "output/" + nowstr + ".csv"
         df_concat.to_csv(filename, index=False)
 
+        np_outputs = np.array(outputs)
+        tensor_outputs = torch.from_numpy(
+            np_outputs.astype(np.float32)).clone()
+        imgs = self._cae.decoder(tensor_outputs[:, 30:])
+        for j, img in enumerate(imgs.cpu()):
+            torchvision.utils.save_image(
+                img, predict_img_dir + "{:03d}.png".format(j))
         # #DECODE OUTPUT
         # img = self._cae.decoder(img_feature)
         # rgb = torchvision.transforms.functional.to_pil_image(img[0], "RGB")
