@@ -281,27 +281,27 @@ class ToroboWholeBodyManager(Plugin):
             if self._widget.buttonTeach.text() == "teach start":
                 self._widget.buttonTeachingMode.click()
                 self.restart_record(origin_recordInterval)
-                self._widget.buttonTeach.setText("teach stop")
-            elif self._widget.buttonTeach.text() == "teach stop":
                 self._widget.buttonTeach.setText("go start posi")
+            elif self._widget.buttonTeach.text() == "teach stop":
+                self._widget.buttonTeach.setText("teach start")
                 self.recordTimer.stop()
                 self.RecordTrajectory(trajName)
                 file_name = "{:03d}".format(self._file_num)
                 self.save_noised_val(self._direct_dir + file_name)
             elif self._widget.buttonTeach.text() == "go start posi":
-                self._widget.buttonTeach.setText("teach start")
+                self._widget.buttonTeach.setText("teach stop")
                 self._widget.buttonGoStart.click()
 
         elif sender == self._widget.buttonReplay:
             if self._widget.buttonReplay.text() == "save":
-                self._widget.buttonReplay.setText("go start posi")
+                self._widget.buttonReplay.setText("replay")
                 self.StopTrajectoryRecord()
                 self.RecordTrajectory(trajName)
                 self.save_sensors()
                 self.interval_para = 1
             elif self._widget.buttonReplay.text() == "go start posi":
                 self._widget.buttonGoStart.click()
-                self._widget.buttonReplay.setText("replay")
+                self._widget.buttonReplay.setText("save")
             elif self._widget.buttonReplay.text() == "replay":
                 self._widget.buttonMovingMode.click()
                 self.clean_sensors()
@@ -791,7 +791,8 @@ class ToroboWholeBodyManager(Plugin):
         loadfile = QFileDialog.getOpenFileName(
             self._widget,
             "Please select loading rosparam yaml file",
-            self._data_dir,
+            self._data_dir +
+            "1127/direct/",
             "Yaml (*.yaml)",
         )
         fileName = loadfile[0]
