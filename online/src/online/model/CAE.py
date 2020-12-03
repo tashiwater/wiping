@@ -23,7 +23,7 @@ class CAE(torch.nn.Module):
             Cell(128, 256),
             torch.nn.Flatten(),
             Cell(8 * 6 * 256, 254, mode="linear"),
-            Cell(254, hidden_dim, activate="tanh", mode="linear"),
+            Cell(254, hidden_dim, mode="linear"),
         )
         self.decoder = torch.nn.Sequential(
             Cell(hidden_dim, 254, mode="linear"),
