@@ -13,7 +13,9 @@ import sys
 import rospy
 
 from dataset_noimg import OnlineDataSet as MyDataSet
-from model.MTRNN_cs import MTRNN
+from model.MTRNN import MTRNN
+from model.CNNMTRNN import CNNMTRNN
+from model.CAE import CAE as CAE
 from torobo_func import follow_trajectory
 import actionlib
 
@@ -24,7 +26,6 @@ if len(sys.argv) == 5:
     open_rate = float(sys.argv[1])
     cf_num = int(sys.argv[3])
     cs_num = int(sys.argv[4])
-
 
 rospy.init_node("online")
 action_service_name = "/torobo/arm_controller/follow_joint_trajectory"
@@ -43,21 +44,20 @@ cae = None
 # cae.load_state_dict(checkpoint["model"])
 high_freq = 4
 mode = "normal"
-device = torch.device("cuda:0")
+device = torch.device("cpu")
 dataset = MyDataSet(cae, device, high_freq, mode)
+
 in_size = 30
-# cf_num = 100
-# cs_num = 12
 net = MTRNN(
-    24,
     layer_size={"in": in_size, "out": in_size,
                 "io": 50, "cf": cf_num, "cs": cs_num},
     tau={"tau_io": 2, "tau_cf": 5, "tau_cs": 30},
     open_rate=open_rate,
     activate=torch.nn.Tanh()
 )
-model_path = MODEL_DIR + "MTRNN/cs/5000/{}_{}.pth".format(cf_num, cs_num)
-checkpoint = torch.load(model_path, map_location=torch.device("cpu"))
+model_path = MODEL_DIR + \
+    "MTRNN/normalize_big/5000/{}_{}.pth".format(cf_num, cs_num)
+checkpoint = torch.load(model_path, map_location=device)
 net.load_state_dict(checkpoint["model"])
 # net = CNNMTRNN(
 #     layer_size={"in": in_size, "out": in_size, "io": 50, "cf": 100, "cs": 15},
@@ -71,8 +71,7 @@ net.load_state_dict(checkpoint["model"])
 
 print(net)
 net.eval()
-each_container = 3
-net.init_state(1, net.cs0[container*each_container])
+net.init_state(1)
 alltype_cs = []
 outputs = []
 output_imgs = []
@@ -81,7 +80,7 @@ cf_states = []
 cs_states = []
 hz = 10
 rate = rospy.Rate(hz * high_freq)
-end_step = 30 * hz
+end_step = 20 * hz
 motion_count = 0
 start_frame = 0  # 10 * high_freq
 
@@ -129,7 +128,9 @@ while not rospy.is_shutdown() and motion_count < end_step:
         cs_states.append(net.cs_state.detach().numpy()[0])
     rate.sleep()
 # dataset.save_inputs(outputs, cs_states, output_imgs)
-dataset.save_inputs(outputs, cs_states, open_rate, container)
+add_word = "_cf{}_cs{}_type{}_open{:02d}".format(
+    cf_num, cs_num, container, int(open_rate*10))
+dataset.save_inputs(outputs, cs_states, add_word)
 # while not rospy.is_shutdown() and finish_s > now_s:
 #     now_s = rospy.Time.now().to_sec() - start_s
 #     motion_count += 1

@@ -125,7 +125,9 @@ while not rospy.is_shutdown() and motion_count < end_step:
         cs_states.append(net.cs_state.detach().numpy()[0])
     rate.sleep()
 # dataset.save_inputs(outputs, cs_states, output_imgs)
-dataset.save_inputs(outputs, cs_states, open_rate, container)
+add_word = "_cf{}_cs{}_type{}_open{:02d}".format(
+    cf_num, cs_num, container, int(open_rate*10))
+dataset.save_inputs(outputs, cs_states, add_word)
 # while not rospy.is_shutdown() and finish_s > now_s:
 #     now_s = rospy.Time.now().to_sec() - start_s
 #     motion_count += 1

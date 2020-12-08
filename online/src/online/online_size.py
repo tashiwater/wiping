@@ -12,19 +12,18 @@ import sys
 # from sklearn.decomposition import PCA
 import rospy
 
-from dataset_noimg_notheta import OnlineDataSet as MyDataSet
-from model.MTRNN import MTRNN
-from model.CNNMTRNN import CNNMTRNN
-from model.CAE import CAE as CAE
+from dataset_size import OnlineDataSet as MyDataSet
+from model.MTRNN_size import MTRNN
 from torobo_func import follow_trajectory
 import actionlib
 
 from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
 
-if len(sys.argv) != 2:
+if len(sys.argv) == 5:
     container = int(sys.argv[2])
     open_rate = float(sys.argv[1])
-
+    cf_num = int(sys.argv[3])
+    cs_num = int(sys.argv[4])
 
 rospy.init_node("online")
 action_service_name = "/torobo/arm_controller/follow_joint_trajectory"
@@ -37,26 +36,20 @@ RESULT_DIR = DATA_DIR + "result/"
 MODEL_DIR = DATA_DIR + "model/"
 
 cae = None
-# cae = CAE()
-# cae_path = MODEL_DIR + "CAE/20201116_174430_2000.pth"
-# checkpoint = torch.load(cae_path, map_location=torch.device("cpu"))
-# cae.load_state_dict(checkpoint["model"])
 high_freq = 4
 mode = "normal"
 device = torch.device("cuda:0")
 dataset = MyDataSet(cae, device, high_freq, mode)
 
-in_size = 30
-cf_num = 80
-cs_num = 10
+in_size, out_size = 30, 33
 net = MTRNN(
-    layer_size={"in": in_size, "out": in_size,
+    layer_size={"in": in_size, "out": out_size,
                 "io": 50, "cf": cf_num, "cs": cs_num},
     tau={"tau_io": 2, "tau_cf": 5, "tau_cs": 30},
     open_rate=open_rate,
     activate=torch.nn.Tanh()
 )
-model_path = MODEL_DIR + "MTRNN/noimg/20201122_202559_10000finish.pth"
+model_path = MODEL_DIR + "MTRNN/size/5000/{}_{}.pth".format(cf_num, cs_num)
 checkpoint = torch.load(model_path, map_location=torch.device("cpu"))
 net.load_state_dict(checkpoint["model"])
 # net = CNNMTRNN(
@@ -128,7 +121,9 @@ while not rospy.is_shutdown() and motion_count < end_step:
         cs_states.append(net.cs_state.detach().numpy()[0])
     rate.sleep()
 # dataset.save_inputs(outputs, cs_states, output_imgs)
-dataset.save_inputs(outputs, cs_states, open_rate, container)
+add_word = "_cf{}_cs{}_type{}_open{:02d}".format(
+    cf_num, cs_num, container, int(open_rate*10))
+dataset.save_inputs(outputs, cs_states, add_word)
 # while not rospy.is_shutdown() and finish_s > now_s:
 #     now_s = rospy.Time.now().to_sec() - start_s
 #     motion_count += 1
