@@ -38,18 +38,18 @@ MODEL_DIR = DATA_DIR + "model/"
 cae = None
 high_freq = 4
 mode = "normal"
-device = torch.device("cuda:0")
+device = torch.device("cpu")
 dataset = MyDataSet(cae, device, high_freq, mode)
 
 in_size, out_size = 30, 33
 net = MTRNN(
     layer_size={"in": in_size, "out": out_size,
                 "io": 50, "cf": cf_num, "cs": cs_num},
-    tau={"tau_io": 2, "tau_cf": 5, "tau_cs": 30},
+    tau={"tau_io": 2, "tau_cf": 10, "tau_cs": 30},
     open_rate=open_rate,
     activate=torch.nn.Tanh()
 )
-model_path = MODEL_DIR + "MTRNN/size/5000/{}_{}.pth".format(cf_num, cs_num)
+model_path = MODEL_DIR + "MTRNN/size_30/10000/{}_{}.pth".format(cf_num, cs_num)
 checkpoint = torch.load(model_path, map_location=torch.device("cpu"))
 net.load_state_dict(checkpoint["model"])
 # net = CNNMTRNN(

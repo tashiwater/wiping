@@ -51,12 +51,12 @@ in_size = 30
 net = MTRNN(
     layer_size={"in": in_size, "out": in_size,
                 "io": 50, "cf": cf_num, "cs": cs_num},
-    tau={"tau_io": 2, "tau_cf": 5, "tau_cs": 30},
+    tau={"tau_io": 2, "tau_cf": 10, "tau_cs": 30},
     open_rate=open_rate,
     activate=torch.nn.Tanh()
 )
 model_path = MODEL_DIR + \
-    "MTRNN/normalize_big/5000/{}_{}.pth".format(cf_num, cs_num)
+    "MTRNN/cf10/5000/{}_{}.pth".format(cf_num, cs_num)
 checkpoint = torch.load(model_path, map_location=device)
 net.load_state_dict(checkpoint["model"])
 # net = CNNMTRNN(
