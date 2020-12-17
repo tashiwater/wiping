@@ -56,7 +56,8 @@ net = MTRNN(
     open_rate=open_rate,
     activate=torch.nn.Tanh()
 )
-model_path = MODEL_DIR + "MTRNN/cs/5000/{}_{}.pth".format(cf_num, cs_num)
+model_path = MODEL_DIR + \
+    "MTRNN/1127/cs_noimg_tanh/5000/{}_{}.pth".format(cf_num, cs_num)
 checkpoint = torch.load(model_path, map_location=torch.device("cpu"))
 net.load_state_dict(checkpoint["model"])
 # net = CNNMTRNN(

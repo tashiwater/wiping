@@ -13,17 +13,15 @@ import sys
 import rospy
 
 from dataset_noimg import OnlineDataSet as MyDataSet
-from model.MTRNN import MTRNN
-from model.CNNMTRNN import CNNMTRNN
-from model.CAE import CAE as CAE
+from model.MTRNN_cs import MTRNN
 from torobo_func import follow_trajectory
 import actionlib
 
 from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
 
 if len(sys.argv) == 5:
-    container = int(sys.argv[2])
     open_rate = float(sys.argv[1])
+    container = int(sys.argv[2])
     cf_num = int(sys.argv[3])
     cs_num = int(sys.argv[4])
 
@@ -51,12 +49,12 @@ in_size = 30
 net = MTRNN(
     layer_size={"in": in_size, "out": in_size,
                 "io": 50, "cf": cf_num, "cs": cs_num},
-    tau={"tau_io": 2, "tau_cf": 10, "tau_cs": 30},
+    tau={"tau_io": 2, "tau_cf": 5, "tau_cs": 30},
     open_rate=open_rate,
     activate=torch.nn.Tanh()
 )
 model_path = MODEL_DIR + \
-    "MTRNN/cf10/5000/{}_{}.pth".format(cf_num, cs_num)
+    "MTRNN/1127/cs_noimg_tanh/5000/{}_{}.pth".format(cf_num, cs_num)
 checkpoint = torch.load(model_path, map_location=device)
 net.load_state_dict(checkpoint["model"])
 # net = CNNMTRNN(
@@ -71,7 +69,9 @@ net.load_state_dict(checkpoint["model"])
 
 print(net)
 net.eval()
-net.init_state(1)
+# net.init_state(1)
+each_container = 3
+net.init_state(1, net.cs0[container*each_container])
 alltype_cs = []
 outputs = []
 output_imgs = []

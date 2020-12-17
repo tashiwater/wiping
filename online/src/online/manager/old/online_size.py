@@ -41,7 +41,7 @@ mode = "normal"
 device = torch.device("cpu")
 dataset = MyDataSet(cae, device, high_freq, mode)
 
-in_size, out_size = 30, 33
+in_size, out_size = 30, 32
 net = MTRNN(
     layer_size={"in": in_size, "out": out_size,
                 "io": 50, "cf": cf_num, "cs": cs_num},
@@ -49,7 +49,8 @@ net = MTRNN(
     open_rate=open_rate,
     activate=torch.nn.Tanh()
 )
-model_path = MODEL_DIR + "MTRNN/size_30/10000/{}_{}.pth".format(cf_num, cs_num)
+model_path = MODEL_DIR + \
+    "MTRNN/1210/size/open01/1000/{}_{}.pth".format(cf_num, cs_num)
 checkpoint = torch.load(model_path, map_location=torch.device("cpu"))
 net.load_state_dict(checkpoint["model"])
 # net = CNNMTRNN(
@@ -118,12 +119,13 @@ while not rospy.is_shutdown() and motion_count < end_step:
             print(motion_count)
         outputs.append(output)
         # output_imgs.append(output_img[0])
+        cf_states.append(net.cf_state.detach().numpy()[0])
         cs_states.append(net.cs_state.detach().numpy()[0])
     rate.sleep()
 # dataset.save_inputs(outputs, cs_states, output_imgs)
 add_word = "_cf{}_cs{}_type{}_open{:02d}".format(
     cf_num, cs_num, container, int(open_rate*10))
-dataset.save_inputs(outputs, cs_states, add_word)
+dataset.save_inputs(outputs, cf_states, cs_states, add_word)
 # while not rospy.is_shutdown() and finish_s > now_s:
 #     now_s = rospy.Time.now().to_sec() - start_s
 #     motion_count += 1

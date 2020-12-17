@@ -123,17 +123,6 @@ class OnlineDataSet:
         effort = self.normalize(effort, self._effort_before_scale)
         tactile = self.normalize(tactile, self._tactile_before_scale)
         # img_feature = self.normalize(img_feature, img_before_scale)
-        if self._mode == "custom":
-            normalized_tactile = []
-            for t in tactiles:
-                normalized_tactile.append(
-                    self.normalize(t, tactile_before_scale))
-            motor = torch.from_numpy(np.hstack([position, effort])).float()
-            img = torch.from_numpy(img_feature).float()
-            tactiles = torch.from_numpy(normalized_tactile).float()
-            self._custom_data = [motor, tactiles, img]
-
-        # print(position.shape,effort.shape,tactile.shape,img_feature.shape )
         connected_data = np.hstack([position, effort, tactile])
         self._connected_data = torch.tensor(
             connected_data).float().unsqueeze(0)
@@ -211,7 +200,7 @@ class OnlineDataSet:
             ret.append(p_cliped)
         return ret
 
-    def save_inputs(self, outputs, cs_states, add_word):
+    def save_inputs(self, outputs, cf_states, cs_states, add_word):
         data_dir = "/home/assimilation/TAKUMI_SHIMIZU/wiping_ws/src/wiping/online/data/"
 
         log_dir = data_dir + "log/"
@@ -234,14 +223,19 @@ class OnlineDataSet:
             #     output_img_dir + "/{:03d}.jpg".format(i))
 
         # add
-        df_output = pd.DataFrame(data=outputs, columns=self.get_header("out_"))
+        header = self.get_header(
+            "out_") + ["size{}".format(i) for i in range(2)]
+        df_output = pd.DataFrame(data=outputs, columns=header)
 
         filename = log_dir + "output/" + nowstr + "output.csv"
         # df.to_csv(filename, index=False)
+        df_cf = pd.DataFrame(data=cf_states, columns=[
+            "cf_states{}".format(i) for i in range(len(cf_states[0]))])
         df_cs = pd.DataFrame(data=cs_states, columns=[
             "cs_states{}".format(i) for i in range(len(cs_states[0]))])
 
-        df_concat = pd.concat([df_input, df_output, df_cs], axis=1, sort=False)
+        df_concat = pd.concat(
+            [df_input, df_output, df_cf, df_cs], axis=1, sort=False)
         filename = log_dir + "output/" + nowstr + ".csv"
         df_concat.to_csv(filename, index=False)
 

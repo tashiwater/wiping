@@ -48,41 +48,40 @@ class OnlineDataSet:
             [-1.396, 0.087],
         ]
         self._position_before_scale = [
-            [1.7873218429046445, 2.058947496177859],
-            [-0.6268000628434227, 0.005986479242794388],
-            [-0.35454616986905824, 0.02745402833492248],
-            [0.8632747860467361, 1.5960337728650325],
-            [0.21390754553441596, 0.7578219292580048],
-            [-0.16929693411449862, 0.2787116258541295],
-            [-1.3753195038347534, -1.0480527588016495],
+            [1.5525751117746291, 2.159618048018108],
+            [-0.6268000628434227, 0.12201597106955885],
+            [-0.5634621026380682, 0.1518261978894153],
+            [0.6376909269632473, 1.6881173612444842],
+            [0.17943730279438197, 0.9541191389919468],
+            [-0.8867668629174613, 0.2787116258541295],
+            [-1.3753195038347534, -0.4766494093985876],
         ]
         self._effort_before_scale = [
-            [21.323997497558594, 43.88399887084961],
-            [-12.402000427246096, 15.775500297546387],
-            [-5.519999504089356, 13.943999290466307],
-            [-6.23199987411499, 9.94333267211914],
+            [17.15999984741211, 56.85599899291992],
+            [-16.321500778198242, 15.775500297546387],
+            [-5.519999504089356, 14.615999221801758],
+            [-12.09666633605957, 15.99799919128418],
             [-1.93066668510437, 2.7149999141693115],
-            [-7.15000057220459, 1.900000095367432],
-            [-1.807666778564453, 5.485333442687988],
+            [-7.15000057220459, 2.700000047683716],
+            [-1.807666778564453, 6.295667171478272],
         ]
         self._tactile_before_scale = [
             [0.0, 0.7419354319572449],
-            [0.0, 0.6354838609695435],
+            [0.0, 0.6580645442008972],
             [0.0, 0.5774193406105042],
             [0.0, 0.745161235332489],
             [0.0, 0.699999988079071],
-            [0.0032258064020425077, 0.6935483813285828],
-            [0.006451612804085015, 0.625806450843811],
+            [0.0, 0.6935483813285828],
+            [0.0, 0.625806450843811],
             [0.0, 0.7032257914543152],
             [0.0, 0.7290322184562683],
             [0.0, 0.6806451678276062],
             [0.0032258064020425077, 0.6064516305923462],
             [0.0, 0.7548387050628662],
-            [0.0, 0.8096774220466614],
+            [0.0, 0.8193548321723938],
             [0.0, 0.8258064389228821],
             [0.0, 0.6645161509513855],
-            [0.0, 0.5870967507362366],
-        ]
+            [0.0, 0.5870967507362366], ]
         self._last_tactile = None
         self._last_img = None
         self._connected_data = None
@@ -123,6 +122,17 @@ class OnlineDataSet:
         effort = self.normalize(effort, self._effort_before_scale)
         tactile = self.normalize(tactile, self._tactile_before_scale)
         # img_feature = self.normalize(img_feature, img_before_scale)
+        if self._mode == "custom":
+            normalized_tactile = []
+            for t in tactiles:
+                normalized_tactile.append(
+                    self.normalize(t, tactile_before_scale))
+            motor = torch.from_numpy(np.hstack([position, effort])).float()
+            img = torch.from_numpy(img_feature).float()
+            tactiles = torch.from_numpy(normalized_tactile).float()
+            self._custom_data = [motor, tactiles, img]
+
+        # print(position.shape,effort.shape,tactile.shape,img_feature.shape )
         connected_data = np.hstack([position, effort, tactile])
         self._connected_data = torch.tensor(
             connected_data).float().unsqueeze(0)
@@ -223,9 +233,7 @@ class OnlineDataSet:
             #     output_img_dir + "/{:03d}.jpg".format(i))
 
         # add
-        header = self.get_header(
-            "out_") + ["out_size{}".format(i) for i in range(3)]
-        df_output = pd.DataFrame(data=outputs, columns=header)
+        df_output = pd.DataFrame(data=outputs, columns=self.get_header("out_"))
 
         filename = log_dir + "output/" + nowstr + "output.csv"
         # df.to_csv(filename, index=False)
