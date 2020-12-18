@@ -755,21 +755,21 @@ class ToroboWholeBodyManager(Plugin):
         with open(fileName + "_raw.yaml", "w") as outfile:
             yaml.dump(param, outfile, default_flow_style=False)
 
-        # for j in range(10):
-        #     new_param = copy.deepcopy(param)
-        #     true_sequence = param[name]["teaching_trajectories"]["traj0"]
-        #     new_sequence = new_param[name]["teaching_trajectories"]["traj0"]
-        #     for i, d in enumerate(new_sequence):
-        #         if i == len(new_sequence)-1:
-        #             break
-        #         for k, _ in enumerate(d["positions"]):
-        #             vel = true_sequence[i+1]["positions"][k] - \
-        #                 true_sequence[i]["positions"][k]
-        #             new_sequence[i+1]["positions"][k] = new_sequence[i]["positions"][k] + \
-        #                 vel * random.uniform(0.9, 1.1)
-        #     # print(new_param)
-        #     with open(fileName + "_{}.yaml".format(j+2), "w") as outfile:
-        #         yaml.dump(new_param, outfile, default_flow_style=False)
+        for j in range(10):
+            new_param = copy.deepcopy(param)
+            true_sequence = param[name]["teaching_trajectories"]["traj0"]
+            new_sequence = new_param[name]["teaching_trajectories"]["traj0"]
+            for i, d in enumerate(new_sequence):
+                if i == len(new_sequence)-1:
+                    break
+                for k, _ in enumerate(d["positions"]):
+                    vel = true_sequence[i+1]["positions"][k] - \
+                        true_sequence[i]["positions"][k]
+                    new_sequence[i+1]["positions"][k] = new_sequence[i]["positions"][k] + \
+                        vel * random.uniform(0.9, 1.1)
+            # print(new_param)
+            with open(fileName + "_{}.yaml".format(j+2), "w") as outfile:
+                yaml.dump(new_param, outfile, default_flow_style=False)
 
     def SaveRosParam(self):
         loadfile = QFileDialog.getSaveFileName(
