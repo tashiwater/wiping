@@ -187,9 +187,16 @@ class OnlineDataSet:
         output_img_dir = log_dir + "decoded_img/" + nowstr
         os.mkdir(input_img_dir)
         # os.mkdir(output_img_dir)
+        # fourcc = cv2.VideoWriter_fourcc(*'H264')
+        # mp4path = input_img_dir + "/"+add_word + ".mp4"
+        # fps = 10
+        # video = cv2.VideoWriter(mp4path, fourcc, fps, self._imgs[0].size)
         gif = []
         for i, img in enumerate(self._imgs):
             img.save(input_img_dir + "/{:03d}.jpg".format(i))
+        #     cv2img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+        #     video.write(cv2img)
+        # video.release()
             gif.append(img.convert("P", palette=PIL.Image.ADAPTIVE))
         gif[0].save(input_img_dir + "/"+add_word + '.gif',
                     save_all=True, optimize=False, append_images=gif[1:], loop=True, duration=100)
