@@ -55,8 +55,10 @@ class OnlineDataSet:
         self.dsize = 5
         self._img_size = (128, 96)
         self._tactile_frame_num = 5
+        self.is_start = False
 
-    def calibrate(self):
+    def start(self):
+        self.is_start = True
         self._start_val = [self._last_position,
                            self._last_effort, self._last_tactile]
 
@@ -112,10 +114,15 @@ class OnlineDataSet:
 
     def TouchSensorCallback(self, data):
         self._last_tactile = data.data
+        if self.is_start:
+            self._tactiles.append(self._last_tactile)
 
     def ToroboCallback(self, data):
         self._last_position = data.position
         self._last_effort = data.effort
+        if self.is_start:
+            self._positions.append(self._last_position)
+            self._efforts.append(self._last_effort)
 
     def get_img_feature(self, img):
         img = random_crop_image(img, self._img_size, test=True)

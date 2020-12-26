@@ -75,13 +75,12 @@ class ManagerBase:
 
         print("start")
         for _ in range(5):
-            self._dataset.cal_high_freq()
             rate.sleep()
-        self._dataset.calibrate()
+        self._dataset.start()
 
         while not rospy.is_shutdown() and motion_count < end_step:
             self._dataset.cal_high_freq()
-            self._dataset.cal_features(1)
+            self._dataset.cal_features(4)
             inputs_t = self._dataset.get_connected_data()
             if inputs_t is not None:
                 motion_count += 1
