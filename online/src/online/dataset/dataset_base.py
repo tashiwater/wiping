@@ -20,7 +20,9 @@ from crop import random_crop_image
 class OnlineDataSet:
     def set_before_scale(self, val):
         self._position_before_scale = val[:7]
-        self._effort_before_scale = val[7:]
+        self._effort_before_scale = val[7:14]
+        if len(val) > 14:
+            self._tactile_before_scale = val[14:]
 
     def __init__(self):
         rospy.Subscriber("/image_raw", Image, self.cb_image)

@@ -28,8 +28,9 @@ class ManagerBase:
             # self._cf_num = int(sys.argv[3])
             # self._cs_num = int(sys.argv[4])
             self._cf_num = int(sys.argv[2])
-            self._cs_num = int(sys.argv[3])
-            self._container = int(sys.argv[4])
+
+            self._container = int(sys.argv[3])
+            self._cs_num = int(sys.argv[4])
 
     def init_ros(self):
         rospy.init_node("online")
