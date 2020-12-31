@@ -29,8 +29,8 @@ class ManagerBase:
             # self._cs_num = int(sys.argv[4])
             self._cf_num = int(sys.argv[2])
 
-            self._container = int(sys.argv[3])
-            self._cs_num = int(sys.argv[4])
+            self._container = int(sys.argv[4])
+            self._cs_num = int(sys.argv[3])
 
     def init_ros(self):
         rospy.init_node("online")
@@ -41,7 +41,7 @@ class ManagerBase:
     def read_dir(self):
         CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
         DATA_DIR = CURRENT_DIR + "/../../../data/"
-        self._result_dir = DATA_DIR + "result/"
+        self._data_dir = DATA_DIR
         self._model_dir = DATA_DIR + "model/"
 
     def set_MTRNN(self):
@@ -61,6 +61,12 @@ class ManagerBase:
         print(self._net)
         self._net.eval()
         self._net.init_state(1)
+
+    def add(self):
+        pass
+
+    def temp4offline(self, inputs_t):
+        return self._net(inputs_t)
 
     def run(self):
         outputs = []
@@ -85,10 +91,12 @@ class ManagerBase:
             inputs_t = self._dataset.get_connected_data()
             if inputs_t is not None:
                 motion_count += 1
-
+                self.add()
                 cf_states.append(self._net.cf_state.detach().numpy()[0])
                 cs_states.append(self._net.cs_state.detach().numpy()[0])
-                output = self._net(inputs_t)
+
+                # output = self._net(inputs_t)
+                output = self.temp4offline(inputs_t)
                 output = output.detach().numpy()[0]
                 normalized_position = output[:7]
                 joint_position = self._dataset.reverse_position(
