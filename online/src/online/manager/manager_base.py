@@ -14,10 +14,10 @@ import rospy
 
 from dataset.dataset_base import OnlineDataSet as MyDataSet
 from model.MTRNN_cs import MTRNN
-from torobo_func import follow_trajectory
-import actionlib
+from model.CAE import CAE
+from torobo_func import publish_joint_trajectory, follow_trajectory
 
-from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
+from trajectory_msgs.msg import JointTrajectory
 
 
 class ManagerBase:
@@ -34,7 +34,9 @@ class ManagerBase:
 
     def init_ros(self):
         rospy.init_node("online")
-        self._action_service_name = "/torobo/arm_controller/follow_joint_trajectory"
+        TOPIC_NAME = '/torobo/arm_controller/command'
+        self._publisher = rospy.Publisher(
+            TOPIC_NAME, JointTrajectory, queue_size=1)
         self._JOINT_NAMES = ["arm/joint_" + str(i)
                              for i in range(1, 8)]  # from joint_1 to joint_8
 
@@ -45,22 +47,23 @@ class ManagerBase:
         self._model_dir = DATA_DIR + "model/"
 
     def set_MTRNN(self):
-        in_size, out_size = 30, 30
-        self._net = MTRNN(
-            layer_size={"in": in_size, "out": out_size,
-                        "io": 50, "cf": self._cf_num, "cs": self._cs_num},
-            tau={"tau_io": 2, "tau_cf": 5, "tau_cs": 30},
-            open_rate=self._open_rate,
-            activate=torch.nn.Tanh()
-        )
-        model_path = self._model_dir + \
-            "MTRNN/1210/size/open01/1000/{}_{}.pth".format(
-                self._cf_num, self._cs_num)
-        checkpoint = torch.load(model_path, map_location=torch.device("cpu"))
-        self._net.load_state_dict(checkpoint["model"])
-        print(self._net)
-        self._net.eval()
-        self._net.init_state(1)
+        pass
+        # in_size, out_size = 30, 30
+        # self._net = MTRNN(
+        #     layer_size={"in": in_size, "out": out_size,
+        #                 "io": 50, "cf": self._cf_num, "cs": self._cs_num},
+        #     tau={"tau_io": 2, "tau_cf": 5, "tau_cs": 30},
+        #     open_rate=self._open_rate,
+        #     activate=torch.nn.Tanh()
+        # )
+        # model_path = self._model_dir + \
+        #     "MTRNN/1210/size/open01/1000/{}_{}.pth".format(
+        #         self._cf_num, self._cs_num)
+        # checkpoint = torch.load(model_path, map_location=torch.device("cpu"))
+        # self._net.load_state_dict(checkpoint["model"])
+        # print(self._net)
+        # self._net.eval()
+        # self._net.init_state(1)
 
     def add(self):
         pass
@@ -73,53 +76,71 @@ class ManagerBase:
         # output_imgs = []
         cf_states = []
         cs_states = []
-        hz = 10
+        hz = 5
         high_freq = 4
-        rate = rospy.Rate(hz * high_freq)
-        end_step = 20 * hz
+        rate = rospy.Rate(hz*high_freq)
         motion_count = 0
-        start_frame = 0  # 10 * high_freq
+        start_step = 0  # 10 * high_freq
 
         print("start")
-        for _ in range(5):
-            rate.sleep()
+        rospy.sleep(1)
         self._dataset.start()
 
-        while not rospy.is_shutdown() and motion_count < end_step:
+        while not rospy.is_shutdown() and motion_count < self.end_step * high_freq:
+            motion_count += 1
             self._dataset.cal_high_freq()
-            self._dataset.cal_features(4)
-            inputs_t = self._dataset.get_connected_data()
-            if inputs_t is not None:
-                motion_count += 1
-                self.add()
-                cf_states.append(self._net.cf_state.detach().numpy()[0])
-                cs_states.append(self._net.cs_state.detach().numpy()[0])
+            if motion_count % high_freq == 0:
+                self._dataset.cal_features(high_freq)
+                inputs_t = self._dataset.get_connected_data()
+                if inputs_t is not None:
+                    self.add()
+                    cf_states.append(self._net.cf_state.detach().numpy()[0])
+                    cs_states.append(self._net.cs_state.detach().numpy()[0])
 
-                # output = self._net(inputs_t)
-                output = self.temp4offline(inputs_t)
-                output = output.detach().numpy()[0]
-                normalized_position = output[:7]
-                joint_position = self._dataset.reverse_position(
-                    normalized_position)
-                if motion_count > start_frame:
-                    ret = follow_trajectory(
-                        self._action_service_name,
-                        joint_names=self._JOINT_NAMES,
-                        positions=joint_position,
-                        time_from_start=1,
-                    )
-                    print(ret)
-                    print(motion_count)
-                outputs.append(output)
+                    # output = self._net(inputs_t)
+                    output = self.temp4offline(inputs_t)
+                    output = output.detach().numpy()[0]
+                    normalized_position = output[:7]
+                    joint_position = self._dataset.reverse_position(
+                        normalized_position)
+                    # old_posi = self._dataset.reverse_position(inputs_t[0, :7])
+                    # velocities = (joint_position - old_posi) * hz
+                    # velocities = [(p-op)*10 for (p, op)
+                    #               in zip(joint_position, old_posi)]
+                    # print(velocities)
+                    if start_step < motion_count:
+                        publish_joint_trajectory(
+                            self._publisher,
+                            # '/torobo/arm_controller/follow_joint_trajectory',
+                            self._JOINT_NAMES,
+                            joint_position,
+                            # velocities=velocities,
+                            time_from_start=1,
+                        )
+                    print(motion_count / high_freq)
+                    outputs.append(output)
             rate.sleep()
-        add_word = "cf{}_cs{}_type{:02d}_open{:02d}_".format(
-            self._cf_num, self._cs_num, self._container, int(self._open_rate*10))
+        add_word = self.set_addword()
         self._dataset.save_inputs(outputs, cf_states, cs_states, add_word)
 
-    def init(self, before_scale):
+    def set_addword(self):
+        return "cf{}_cs{}_type{:02d}_open{:02d}_".format(
+            self._cf_num, self._cs_num, self._container, int(self._open_rate*10))
+
+    def set_cae(self, name):
+        cae = CAE()
+        model_path = self._model_dir + name
+        checkpoint = torch.load(model_path, map_location=torch.device("cpu"))
+        cae.load_state_dict(checkpoint["model"])
+        print(cae)
+        cae.eval()
+        self._dataset.set_cae(cae)
+
+    def init(self, before_scale, end_step):
         self.read_argv()
         self.read_dir()
         self.init_ros()
         self._dataset = MyDataSet()
         self._dataset.set_before_scale(before_scale)
         self.set_MTRNN()
+        self.end_step = end_step

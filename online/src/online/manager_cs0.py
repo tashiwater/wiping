@@ -2,16 +2,32 @@
 # coding: utf-8
 
 from manager.manager_base import ManagerBase
-from model.MTRNN import MTRNN
+from model.MTRNN_cs import MTRNN
+from model.cs0_maker import Cs0Maker
 import torch
 import pandas as pd
 import numpy as np
+import copy
+import rospy
 
 
 class Manager(ManagerBase):
-    def set_MTRNN(self):
+    def set_cs0(self):
+        cs0maker = Cs0Maker()
+        model_path = self._model_dir + "CAE/0106/cs0maker/20210115_124418_2000.pth"
+        checkpoint = torch.load(model_path, map_location=torch.device("cpu"))
+        cs0maker.load_state_dict(checkpoint["model"])
+        while self._dataset._last_img is None and not rospy.is_shutdown():
+            pass
+        img = copy.deepcopy(self._dataset._last_img)
+        img_tensor = self._dataset.get_img_tensor(img)
+        self._cs0 = cs0maker(img_tensor)
+        print(self._cs0)
+
+    def set_MTRNN2(self):
         in_size, out_size = 30, 30
         self._net = MTRNN(
+            12,
             layer_size={"in": in_size, "out": out_size,
                         "io": 50, "cf": self._cf_num, "cs":  self._cs_num},
             tau={"tau_io": 2, "tau_cf": 10, "tau_cs": 30},
@@ -19,7 +35,7 @@ class Manager(ManagerBase):
             activate=torch.nn.Tanh()
         )
         model_path = self._model_dir + \
-            "MTRNN/0106/io2cf10cs30/5000/{}_{}.pth".format(
+            "MTRNN/0106/cs2/cf10cs30/2000/{}_{}.pth".format(
                 self._cf_num, self._cs_num)
         checkpoint = torch.load(model_path, map_location=torch.device("cpu"))
         self._net.load_state_dict(checkpoint["model"])
@@ -28,7 +44,8 @@ class Manager(ManagerBase):
         # cs
         # each_container = 3
         # num = self._container*each_container
-        self._net.init_state(1)
+        # self._cs0 = self._net.cs0[num:num+1]
+        self._net.init_state(1, self._cs0)
 
         # self._net.init_state(1)
 
@@ -72,7 +89,7 @@ class Manager(ManagerBase):
     #     return self._net(inputs_t2)
 
     def set_addword(self):
-        return "online_cf{}_cs{}_type{:02d}_open{:02d}_".format(
+        return "cs0_cf{}_cs{}_type{:02d}_open{:02d}_".format(
             self._cf_num, self._cs_num, self._container, int(self._open_rate*10))
 
 
@@ -126,4 +143,6 @@ if __name__ == "__main__":
     ]
     manager = Manager()
     manager.init(before_scale, 250)
+    manager.set_cs0()
+    manager.set_MTRNN2()
     manager.run()

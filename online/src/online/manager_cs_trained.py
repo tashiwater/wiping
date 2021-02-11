@@ -2,7 +2,7 @@
 # coding: utf-8
 
 from manager.manager_base import ManagerBase
-from model.MTRNN import MTRNN
+from model.MTRNN_cs import MTRNN
 import torch
 import pandas as pd
 import numpy as np
@@ -12,6 +12,7 @@ class Manager(ManagerBase):
     def set_MTRNN(self):
         in_size, out_size = 30, 30
         self._net = MTRNN(
+            12,
             layer_size={"in": in_size, "out": out_size,
                         "io": 50, "cf": self._cf_num, "cs":  self._cs_num},
             tau={"tau_io": 2, "tau_cf": 10, "tau_cs": 30},
@@ -19,16 +20,16 @@ class Manager(ManagerBase):
             activate=torch.nn.Tanh()
         )
         model_path = self._model_dir + \
-            "MTRNN/0106/io2cf10cs30/5000/{}_{}.pth".format(
+            "MTRNN/0106/cs2/cf10cs30/2000/{}_{}.pth".format(
                 self._cf_num, self._cs_num)
         checkpoint = torch.load(model_path, map_location=torch.device("cpu"))
         self._net.load_state_dict(checkpoint["model"])
         print(self._net)
         self._net.eval()
         # cs
-        # each_container = 3
-        # num = self._container*each_container
-        self._net.init_state(1)
+        each_container = 3
+        num = self._container*each_container
+        self._net.init_state(1, self._net.cs0[num:num+1])
 
         # self._net.init_state(1)
 
@@ -72,7 +73,7 @@ class Manager(ManagerBase):
     #     return self._net(inputs_t2)
 
     def set_addword(self):
-        return "online_cf{}_cs{}_type{:02d}_open{:02d}_".format(
+        return "cs0_cf{}_cs{}_type{:02d}_open{:02d}_".format(
             self._cf_num, self._cs_num, self._container, int(self._open_rate*10))
 
 
@@ -125,5 +126,5 @@ if __name__ == "__main__":
         [-1.9946666955947876, 2.4310001134872437],
     ]
     manager = Manager()
-    manager.init(before_scale, 250)
+    manager.init(before_scale, 200)
     manager.run()

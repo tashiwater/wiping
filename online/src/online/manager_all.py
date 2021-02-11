@@ -3,6 +3,7 @@
 
 from manager.manager_base import ManagerBase
 from model.MTRNN import MTRNN
+
 import torch
 import pandas as pd
 import numpy as np
@@ -11,6 +12,7 @@ import numpy as np
 class Manager(ManagerBase):
     def set_MTRNN(self):
         in_size, out_size = 30, 30
+        in_size, out_size = 45, 45
         self._net = MTRNN(
             layer_size={"in": in_size, "out": out_size,
                         "io": 50, "cf": self._cf_num, "cs":  self._cs_num},
@@ -19,18 +21,13 @@ class Manager(ManagerBase):
             activate=torch.nn.Tanh()
         )
         model_path = self._model_dir + \
-            "MTRNN/0106/io2cf10cs30/5000/{}_{}.pth".format(
+            "MTRNN/0106/all/5000/{}_{}.pth".format(
                 self._cf_num, self._cs_num)
         checkpoint = torch.load(model_path, map_location=torch.device("cpu"))
         self._net.load_state_dict(checkpoint["model"])
         print(self._net)
         self._net.eval()
-        # cs
-        # each_container = 3
-        # num = self._container*each_container
         self._net.init_state(1)
-
-        # self._net.init_state(1)
 
     #     other_cs_path = self._data_dir + "result/output10.csv"
     #     df = pd.read_csv(other_cs_path)
@@ -71,44 +68,13 @@ class Manager(ManagerBase):
     #     self._temp_count += 1
     #     return self._net(inputs_t2)
 
-    def set_addword(self):
-        return "online_cf{}_cs{}_type{:02d}_open{:02d}_".format(
-            self._cf_num, self._cs_num, self._container, int(self._open_rate*10))
+    # def set_addword(self):
+    #     return "online_cf{}_cs{}_type{:02d}_open{:02d}_".format(
+    #         self._cf_num, self._cs_num, self._container, int(self._open_rate*10))
 
 
 if __name__ == "__main__":
     before_scale = [
-        # 1228
-        # [-0.00045380264974936857, 0.2525317203637283],
-        # [-0.4095415449331442, 0.2959554940438517],
-        # [-0.4832642188483968, 0.07360053468975894],
-        # [-0.8050505611875245, 0.04665259018573553],
-        # [-0.00010472880986733824, 0.8230797955827112],
-        # [-0.1529780982846586, 0.24397957357299477],
-        # [-0.0026004436464077685, 0.5536359703220574],
-        # [-9.923999786376953, 17.700000762939453],
-        # [-10.510499954223633, 19.344000339508057],
-        # [-4.583999872207642, 10.055998802185059],
-        # [-6.4599997997283936, 14.13599944114685],
-        # [-1.5686665773391724, 3.4993333220481873],
-        # [-3.6000000834465027, 3.4500001072883606],
-        # [-1.558333396911621, 3.4906667470932007],
-        # [0.0, 0.7161290049552917],
-        # [0.0, 0.6193548440933228],
-        # [0.0, 0.5129032135009766],
-        # [0.0, 0.7645161151885986],
-        # [-0.029032262042164803, 0.6451613157987595],
-        # [-0.03870967775583267, 0.6645161211490631],
-        # [-0.029032256454229355, 0.5645161587744951],
-        # [-0.03870967775583267, 0.6258064769208431],
-        # [-0.43548389966599643, 0.43225806951522827],
-        # [-0.6161290286108851, 0.24193552136421204],
-        # [-0.4258064776659012, 0.23225805163383484],
-        # [-0.48709677439182997, 0.4322580099105835],
-        # [-0.10967742651700974, 0.7774193286895752],
-        # [-0.08709677122533321, 0.7516129016876221],
-        # [-0.06129032373428345, 0.5580645203590393],
-        # [-0.032258064951747656, 0.5193548081442714],
         [-0.18788481648259991, 0.042219492235189726],
         [-0.2643824543194445, 0.35691982870388905],
         [-0.5818403877102672, 0.03354522767509434],
@@ -125,5 +91,6 @@ if __name__ == "__main__":
         [-1.9946666955947876, 2.4310001134872437],
     ]
     manager = Manager()
-    manager.init(before_scale, 250)
+    manager.init(before_scale, 200)
+    manager.set_cae("CAE/0106/all/20210113_203023_2000.pth")
     manager.run()
